@@ -151,7 +151,6 @@ class EditableBuilder(Builder):
                 for link_target in link_targets:
                     dst = self._env.site_packages.path.joinpath(link_target.package)
                     src = link_target.base.joinpath(link_target.package)
-                    print(f"\nHERE: will add link to {src} at {dst}\n")
                     if dst.exists():
                         dst.unlink()
                     os.symlink(src, dst, src.is_dir())

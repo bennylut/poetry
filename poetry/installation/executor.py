@@ -749,7 +749,7 @@ class Executor:
 
         package = operation.package
 
-        if not package.source_url:
+        if not package.source_url or package.source_type == "legacy":
             # Since we are installing from our own distribution cache
             # pip will write a `direct_url.json` file pointing to the cache
             # distribution.
