@@ -1,8 +1,11 @@
 # About this fork:
 This fork, serve as a relaxed version of poetry (currently based on poetry `v1.2.0a2`).
 
-Poetry is a great tool and was a perfect fit for our team. While using it we found several issues where it is a bit too strict, and while most of the time for good reasons, these issues still made poetry unusable for us in some projects.
-to this end, we choose to fork it and include some relaxations for the issues that we encounter
+Poetry is a great tool and was a perfect fit for our team. 
+Over the time, we found several issues where it is a bit too strict, and while most of the time for good reasons, these issues still made poetry unusable for us in some projects.
+
+To this end, we choose to fork it and include some relaxations for the issues that we encounter.
+While we at it, we also modify some of poetry's behavior to suite our workflows and views better 
 
 ## relaxed Issues:
 
@@ -28,8 +31,13 @@ secondary = true
  poetry refuse to install it. 
 - **Relaxation:** Instead of rejecting the dependent package, This version emits a warning and retry the resolution with a truncated constraint 
  (i.e., '>=3.5.*' will be replaced with '>=3.5') in most cases this allows the dependency to be installed.
+- **Example use case:** Installing packages like nltk which requires python version to be `3.5.*` now possible.
   
-  
+## Modified Behavior:
+
+### Virtual Environments created "in-project" by default
+- **Description:** Changed the configuration `virtualenvs.in-project` to be true by default
+- **Reason:** In my eyes, your project files should be mostly encapsulated in your working directory, it helps maintenance, reduce uncertainty and when deleting the project - no stale data is left behind.    
 
 # Poetry: Dependency Management for Python
 

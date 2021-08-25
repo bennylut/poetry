@@ -154,9 +154,8 @@ class PackageInfo:
             if required_python_version.endswith(".*"):
                 required_python_version_fixed = required_python_version[:-2]
                 logger.warning(
-                    f"Could not resolve package: {name}'s required python version '{required_python_version}',"
-                    f" trying out: '{required_python_version_fixed}'",
-                    level="warning"
+                    f"Could not resolve python version required by package: {name} ('{required_python_version}'),"
+                    f" trying out: '{required_python_version_fixed}' instead.",
                 )
                 package.python_versions = required_python_version_fixed
 
@@ -188,7 +187,6 @@ class PackageInfo:
                 logger.warning(
                     "Invalid constraint ({}) found in {}-{} dependencies, "
                     "skipping".format(req, package.name, package.version),
-                    level="warning",
                 )
                 continue
 
