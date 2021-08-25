@@ -31,7 +31,8 @@ class Config:
         "cache-dir": str(CACHE_DIR),
         "virtualenvs": {
             "create": True,
-            "in-project": None,
+            "in-project": True,
+            "symlinks-on-path-deps": True,
             "path": os.path.join("{cache-dir}", "virtualenvs"),
             "options": {"always-copy": False, "system-site-packages": False},
         },

@@ -87,6 +87,7 @@ class Executor:
         self._lock = threading.Lock()
         self._shutdown = False
         self._hashes: Dict[str, str] = {}
+        self._config = config
 
     @property
     def installations_count(self) -> int:
@@ -582,7 +583,7 @@ class Executor:
                 # we can use the EditableBuilder without going through pip
                 # to install it, unless it has a build script.
                 builder = EditableBuilder(package_poetry, self._env, NullIO())
-                builder.build()
+                builder.build(include_symlinks=self._config.get("virtualenvs.symlinks-on-path-deps"))
 
                 return 0
             elif legacy_pip or package_poetry.package.build_script:

@@ -27,7 +27,7 @@ secondary = true
 ```
    
 ### [Issue 4201](https://github.com/python-poetry/poetry/issues/4201)  
-- **Description:** If a dependent package specify a required python version constraint using the format: `><=x.y.*` (e.g., `>=3.6.*`) which is not a valid PEP 345/PEP 440 constraint, 
+- **Description:** If a dependent package specifies a required python version constraint using the format: `><=x.y.*` (e.g., `>=3.6.*`) which is not a valid PEP 345/PEP 440 constraint, 
  poetry refuse to install it. 
 - **Relaxation:** Instead of rejecting the dependent package, This version emits a warning and retry the resolution with a truncated constraint 
  (i.e., '>=3.5.*' will be replaced with '>=3.5') in most cases this allows the dependency to be installed.
@@ -38,7 +38,13 @@ secondary = true
 ### Virtual Environments created "in-project" by default
 - **Description:** Changed the configuration `virtualenvs.in-project` to be true by default
 - **Reason:** In my eyes, your project files should be mostly encapsulated in your working directory, it helps maintenance, reduce uncertainty and when deleting the project - no stale data is left behind.
-    
+
+### Add configuration to create sym-links for path dependencies
+- **Description:** Add the configuration `virtualenvs.symlinks-on-path-deps` and set it to be true by default
+This configuration instruct poetry to add a symlink to path dependencies (which are in edit/develop mode) installed in the virtual environment
+- **Reason:** Some tools (I am looking at you - Intellij and Pycharm) does not follow the ".pth" files that poetry creates 
+when linking path dependencies. As a result, these tools have problems showing auto-completion options for path dependencies. 
+This setting will add symlinks in addition to the "pth" file to alleviate the issue.
 
 # Poetry: Dependency Management for Python
 
