@@ -37,7 +37,8 @@ secondary = true
 
 ### Virtual Environments created "in-project" by default
 - **Description:** Changed the configuration `virtualenvs.in-project` to be true by default
-- **Reason:** In my eyes, your project files should be mostly encapsulated in your working directory, it helps maintenance, reduce uncertainty and when deleting the project - no stale data is left behind.    
+- **Reason:** In my eyes, your project files should be mostly encapsulated in your working directory, it helps maintenance, reduce uncertainty and when deleting the project - no stale data is left behind.
+    
 
 # Poetry: Dependency Management for Python
 
