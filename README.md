@@ -1,3 +1,36 @@
+# About this fork:
+This fork, serve as a relaxed version of poetry (currently based on poetry `v1.2.0a2`).
+
+Poetry is a great tool and was a perfect fit for our team. While using it we found several issues where it is a bit too strict, and while most of the time for good reasons, these issues still made poetry unusable for us in some projects.
+to this end, we choose to fork it and include some relaxations for the issues that we encounter
+
+## relaxed Issues:
+
+### [Issue 4035](https://github.com/python-poetry/poetry/issues/4035):
+- **Description:** When specifying additional sources in pyproject.toml as "secondary", the current behavior of Poetry is to include this source in all of it's scans for dependency resolution for adding or installing packages. This is almost entirely unnecessary in many cases, as a secondary source is normally only needed to install very specific packages and would not normally host any other packages from pypi (and if they do, it's likely not "secondary" then but "default".)
+- **Relaxation:** optional source is used only if a dependency definition explicitly specifies it in it's source parameter.
+- **Example use case:**
+(based on [piroro-hs's solution to Issue 4231](https://github.com/python-poetry/poetry/issues/4231#issuecomment-871442657)) 
+installing pytorch with cuda 11 is now possible using the following snippet and is much less slower.  
+```toml
+[tool.poetry.dependencies]
+torch = { version = "=1.9.0+cu111", source = "pytorch" }
+torchvision = { version = "=0.10.0+cu111", source = "pytorch" }
+
+[[tool.poetry.source]]
+name = "pytorch"
+url = "https://download.pytorch.org/whl/cu111/"
+secondary = true
+```
+   
+### [Issue 4201](https://github.com/python-poetry/poetry/issues/4201)  
+- **Description:** If a dependent package specify a required python version constraint using the format: `><=x.y.*` (e.g., `>=3.6.*`) which is not a valid PEP 345/PEP 440 constraint, 
+ poetry refuse to install it. 
+- **Relaxation:** Instead of rejecting the dependent package, This version emits a warning and retry the resolution with a truncated constraint 
+ (i.e., '>=3.5.*' will be replaced with '>=3.5') in most cases this allows the dependency to be installed.
+  
+  
+
 # Poetry: Dependency Management for Python
 
 Poetry helps you declare, manage and install dependencies of Python projects,

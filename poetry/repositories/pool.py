@@ -167,12 +167,13 @@ class Pool(BaseRepository):
             return self.repository(repository).find_packages(dependency)
 
         packages = []
-        for repo in self._repositories:
+        for repo in self._repositories[:self._secondary_start_idx]:
             packages += repo.find_packages(dependency)
 
         return packages
 
     def search(self, query: str) -> List["Package"]:
+        print("HERE: Enter method search which will scan all repositories")
         from .legacy_repository import LegacyRepository
 
         results = []

@@ -38,3 +38,6 @@ MANIFEST.in
 /releases/*
 pip-wheel-metadata
 /poetry.toml
+
+# local test files
+dbg_tst.py
