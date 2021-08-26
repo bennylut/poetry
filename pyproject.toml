@@ -9,6 +9,11 @@ license = "MIT"
 
 readme = "README.md"
 
+
+packages = [
+    {include = "poetry"},
+]
+
 include = [
     { path = "tests", format = "sdist" }
 ]
