@@ -37,11 +37,12 @@ class Factory(BaseFactory):
         cwd: Optional[Path] = None,
         io: Optional[IO] = None,
         disable_plugins: bool = False,
+        profiles: Optional[List[str]] = None
     ) -> Poetry:
         if io is None:
             io = NullIO()
 
-        base_poetry = super(Factory, self).create_poetry(cwd)
+        base_poetry = super(Factory, self).create_poetry(cwd, profiles=profiles)
 
         locker = Locker(
             base_poetry.file.parent / "poetry.lock", base_poetry.local_config

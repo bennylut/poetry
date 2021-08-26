@@ -1,0 +1,2 @@
+[tool.poetry.dependencies]
+relaxed-poetry-core = {path="../poetry-core", develop=true}

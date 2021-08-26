@@ -1,50 +1,24 @@
-# About this fork:
-This fork, serve as a relaxed version of poetry (currently based on poetry `v1.2.0a2`).
+# Relaxed Poetry
+This project is a poetry fork. It serves as a relaxed version of poetry (currently based on version 1.2.0a2).
 
-Poetry is a great tool and was a perfect fit for our team. 
-Over the time, we found several issues where it is a bit too strict, and while most of the time for good reasons, these issues still made poetry unusable for us in some projects.
+Poetry is a great tool and was a perfect fit for my team. Over the time, we found several issues where it is a bit too strict, and while most of the time for good reasons, these issues still made poetry unusable for us in many projects.
 
-To this end, we choose to fork it and include some relaxations for the issues that we encounter.
-While we at it, we also modify some of poetry's behavior to suite our workflows and views better 
+Since, in my eyes, there is no real alternative to poetry, I choose to fork it and include some relaxations for the issues that we encounter. While I'm at it, I also modified some of poetry's behavior and added some features that suite our workflows and views better.
 
-## relaxed Issues:
+All of the changes that were made in this fork are documented in the wiki, the following is some notable ones:
+- `virtualenvs.in-project` is true by default
+- new configuration: `virtualenvs.symlinks-on-path-deps` similar to `flit install --symlink`
+- property substitution in pyproject, support defining properties in environment variables
+- build profiles (override values in pyproject, similar to Maven's profiles)
+- Relaxation of python version-constraint for dependent packages (e.g., 3.5.* results in warning and not an error)
+- Secondery source is used only if a dependency definition explicitly specifies it in it's source parameter.
+ 
+See wiki for further details.
 
-### [Issue 4035](https://github.com/python-poetry/poetry/issues/4035):
-- **Description:** When specifying additional sources in pyproject.toml as "secondary", the current behavior of Poetry is to include this source in all of it's scans for dependency resolution for adding or installing packages. This is almost entirely unnecessary in many cases, as a secondary source is normally only needed to install very specific packages and would not normally host any other packages from pypi (and if they do, it's likely not "secondary" then but "default".)
-- **Relaxation:** optional source is used only if a dependency definition explicitly specifies it in it's source parameter.
-- **Example use case:**
-(based on [piroro-hs's solution to Issue 4231](https://github.com/python-poetry/poetry/issues/4231#issuecomment-871442657)) 
-installing pytorch with cuda 11 is now possible using the following snippet and is much less slower.  
-```toml
-[tool.poetry.dependencies]
-torch = { version = "=1.9.0+cu111", source = "pytorch" }
-torchvision = { version = "=0.10.0+cu111", source = "pytorch" }
+**Important**: this package is itself in alpha stage and is based on alpha staged poetry, changes may be frequent, 
+though it is planed to be used internally for our projects from day one.
 
-[[tool.poetry.source]]
-name = "pytorch"
-url = "https://download.pytorch.org/whl/cu111/"
-secondary = true
-```
-   
-### [Issue 4201](https://github.com/python-poetry/poetry/issues/4201)  
-- **Description:** If a dependent package specifies a required python version constraint using the format: `><=x.y.*` (e.g., `>=3.6.*`) which is not a valid PEP 345/PEP 440 constraint, 
- poetry refuse to install it. 
-- **Relaxation:** Instead of rejecting the dependent package, This version emits a warning and retry the resolution with a truncated constraint 
- (i.e., '>=3.5.*' will be replaced with '>=3.5') in most cases this allows the dependency to be installed.
-- **Example use case:** Installing packages like nltk which requires python version to be `3.5.*` now possible.
-  
-## Modified Behavior:
-
-### Virtual Environments created "in-project" by default
-- **Description:** Changed the configuration `virtualenvs.in-project` to be true by default
-- **Reason:** In my eyes, your project files should be mostly encapsulated in your working directory, it helps maintenance, reduce uncertainty and when deleting the project - no stale data is left behind.
-
-### Add configuration to create sym-links for path dependencies
-- **Description:** Add the configuration `virtualenvs.symlinks-on-path-deps` and set it to be true by default
-This configuration instruct poetry to add a symlink to path dependencies (which are in edit/develop mode) installed in the virtual environment
-- **Reason:** Some tools (I am looking at you - Intellij and Pycharm) does not follow the ".pth" files that poetry creates 
-when linking path dependencies. As a result, these tools have problems showing auto-completion options for path dependencies. 
-This setting will add symlinks in addition to the "pth" file to alleviate the issue.
+**The rest of this README left as is from the original Poetry README**
 
 # Poetry: Dependency Management for Python
 

@@ -1,9 +1,9 @@
 [tool.poetry]
-name = "poetry"
-version = "1.2.0a2"
-description = "Python dependency management and packaging made easy."
+name = "relaxed-poetry"
+version = "0.0.1"
+description = "Poetry fork, Python dependency management and packaging made easy."
 authors = [
-    "Sébastien Eustace <sebastien@eustace.io>"
+    "bennylut"
 ]
 license = "MIT"
 
@@ -13,11 +13,11 @@ include = [
     { path = "tests", format = "sdist" }
 ]
 
-homepage = "https://python-poetry.org/"
-repository = "https://github.com/python-poetry/poetry"
-documentation = "https://python-poetry.org/docs"
+homepage = "https://github.com/bennylut/relaxed-poetry"
+repository = "https://github.com/bennylut/relaxed-poetry"
+documentation = "https://github.com/bennylut/relaxed-poetry"
 
-keywords = ["packaging", "dependency", "poetry"]
+keywords = ["packaging", "dependency", "poetry", "relaxed-poetry"]
 
 classifiers = [
     "Topic :: Software Development :: Build Tools",
@@ -27,15 +27,16 @@ classifiers = [
 [tool.poetry.build]
 generate-setup-file = false
 
-[tool.relaxed.poetry.profiles]
-default="local-dev"
+[tool.relaxed-poetry.profiles]
+install="local-develop"
+update="local-develop"
 
 # Requirements
 
 [tool.poetry.dependencies]
 python = "^3.6"
 
-poetry-core = "^1.1.0a6"
+relaxed-poetry-core = "^0.0.3"
 cleo = "^1.0.0a4"
 crashtest = "^0.3.0"
 requests = "^2.18"
@@ -71,7 +72,7 @@ poetry = "poetry.console.application:main"
 
 
 [build-system]
-requires = ["poetry-core>=1.0.0"]
+requires = ["relaxed-poetry-core>=0.0.3"]
 build-backend = "poetry.core.masonry.api"
 
 

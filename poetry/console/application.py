@@ -17,6 +17,7 @@ from cleo.exceptions import CleoException
 from cleo.formatters.style import Style
 from cleo.io.inputs.argv_input import ArgvInput
 from cleo.io.inputs.input import Input
+from cleo.io.inputs.option import Option
 from cleo.io.io import IO
 from cleo.io.outputs.output import Output
 
@@ -24,7 +25,6 @@ from poetry.__version__ import __version__
 
 from .command_loader import CommandLoader
 from .commands.command import Command
-
 
 if TYPE_CHECKING:
     from crashtest.solution_providers.solution_provider_repository import (
@@ -113,6 +113,11 @@ class Application(BaseApplication):
         command_loader = CommandLoader({name: load_command(name) for name in COMMANDS})
         self.set_command_loader(command_loader)
 
+        self.definition.add_option(Option(
+            "profile", None,
+            description="resolve pyproject using the given comma separated list of profile names.",
+            flag=False))
+
     @property
     def poetry(self) -> "Poetry":
         from pathlib import Path
@@ -122,8 +127,12 @@ class Application(BaseApplication):
         if self._poetry is not None:
             return self._poetry
 
+        profiles = [s for s in (self._io.input.option("profile") or "").split(",") if len(s) > 0]
+        if len(profiles) == 0:
+            profiles.append(f"?{self._running_command.name}")
+
         self._poetry = Factory().create_poetry(
-            Path.cwd(), io=self._io, disable_plugins=self._disable_plugins
+            Path.cwd(), io=self._io, disable_plugins=self._disable_plugins, profiles=profiles
         )
 
         return self._poetry

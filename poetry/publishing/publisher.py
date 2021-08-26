@@ -6,6 +6,8 @@ from typing import List
 from typing import Optional
 from typing import Union
 
+from cleo.ui.question import Question
+
 from ..utils.authenticator import Authenticator
 from ..utils.helpers import get_cert
 from ..utils.helpers import get_client_cert
@@ -79,11 +81,14 @@ class Publisher:
         # Requesting missing credentials but only if there is not a client cert defined.
         if not resolved_client_cert:
             if username is None:
-                username = self._io.ask("Username:")
+                username = Question("Username:").ask(self._io)
 
             # skip password input if no username is provided, assume unauthenticated
             if username and password is None:
-                password = self._io.ask_hidden("Password:")
+                qpassword = Question("Password:")
+                qpassword.hide(True)
+
+                password = qpassword.ask(self._io)
 
         self._uploader.auth(username, password)
 
