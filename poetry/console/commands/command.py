@@ -17,7 +17,7 @@ class Command(BaseCommand):
     @property
     def poetry(self) -> "Poetry":
         if self._poetry is None:
-            return self.get_application().poetry
+            self._poetry = self.get_application().poetry
 
         return self._poetry
 

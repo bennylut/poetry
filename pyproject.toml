@@ -27,7 +27,11 @@ classifiers = [
 [tool.poetry.build]
 generate-setup-file = false
 
+[tool.relaxed.poetry.profiles]
+default="local-dev"
+
 # Requirements
+
 [tool.poetry.dependencies]
 python = "^3.6"
 

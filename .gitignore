@@ -38,3 +38,7 @@ MANIFEST.in
 /releases/*
 pip-wheel-metadata
 /poetry.toml
+
+
+.idea
+dbg_tst.py
