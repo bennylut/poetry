@@ -5,7 +5,7 @@ Poetry is a great tool and was a perfect fit for my team. Over the time, we foun
 
 Since, in my eyes, there is no real alternative to poetry, I choose to fork it and include some relaxations for the issues that we encounter. While I'm at it, I also modified some of poetry's behavior and added some features that suite our workflows and views better.
 
-All of the changes that were made in this fork are documented in the wiki, the following is some notable ones:
+All of the changes that were made in this fork are documented in the wiki, the followings are some notable ones:
 - `virtualenvs.in-project` is true by default
 - new configuration: `virtualenvs.symlinks-on-path-deps` similar to `flit install --symlink`
 - property substitution in pyproject, support defining properties in environment variables
