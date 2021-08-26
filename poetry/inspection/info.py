@@ -25,7 +25,6 @@ from poetry.utils.env import EnvCommandError
 from poetry.utils.env import ephemeral_environment
 from poetry.utils.setup_reader import SetupReader
 
-
 logger = logging.getLogger(__name__)
 
 PEP517_META_BUILD = """\
@@ -42,25 +41,25 @@ PEP517_META_BUILD_DEPS = ["pep517===0.8.2", "toml==0.10.1"]
 
 class PackageInfoError(ValueError):
     def __init__(
-        self, path: Union[Path, str], *reasons: Union[BaseException, str]
+            self, path: Union[Path, str], *reasons: Union[BaseException, str]
     ) -> None:
         reasons = (
-            "Unable to determine package info for path: {}".format(str(path)),
-        ) + reasons
+                      "Unable to determine package info for path: {}".format(str(path)),
+                  ) + reasons
         super().__init__("\n\n".join(str(msg).strip() for msg in reasons if msg))
 
 
 class PackageInfo:
     def __init__(
-        self,
-        name: Optional[str] = None,
-        version: Optional[str] = None,
-        summary: Optional[str] = None,
-        platform: Optional[str] = None,
-        requires_dist: Optional[List[str]] = None,
-        requires_python: Optional[str] = None,
-        files: Optional[List[str]] = None,
-        cache_version: Optional[str] = None,
+            self,
+            name: Optional[str] = None,
+            version: Optional[str] = None,
+            summary: Optional[str] = None,
+            platform: Optional[str] = None,
+            requires_dist: Optional[List[str]] = None,
+            requires_python: Optional[str] = None,
+            files: Optional[List[str]] = None,
+            cache_version: Optional[str] = None,
     ):
         self.name = name
         self.version = version
@@ -120,10 +119,10 @@ class PackageInfo:
         getattr(logger, level)(f"<debug>{cls.__name__}:</debug> {msg}")
 
     def to_package(
-        self,
-        name: Optional[str] = None,
-        extras: Optional[List[str]] = None,
-        root_dir: Optional[Path] = None,
+            self,
+            name: Optional[str] = None,
+            extras: Optional[List[str]] = None,
+            root_dir: Optional[Path] = None,
     ) -> Package:
         """
         Create a new `poetry.core.packages.package.Package` instance using metadata from this instance.
@@ -148,7 +147,18 @@ class PackageInfo:
         )
         package.description = self.summary
         package.root_dir = root_dir
-        package.python_versions = self.requires_python or "*"
+        required_python_version = self.requires_python or "*"
+        try:
+            package.python_versions = required_python_version
+        except ValueError:
+            if required_python_version.endswith(".*"):
+                required_python_version_fixed = required_python_version[:-2]
+                logger.warning(
+                    f"Could not resolve python version required by package: {name} ('{required_python_version}'),"
+                    f" trying out: '{required_python_version_fixed}' instead.",
+                )
+                package.python_versions = required_python_version_fixed
+
         package.files = self.files
 
         if root_dir or (self._source_type in {"directory"} and self._source_url):
@@ -174,10 +184,9 @@ class PackageInfo:
                 dependency = Dependency.create_from_pep_508(req, relative_to=root_dir)
             except ValueError:
                 # Likely unable to parse constraint so we skip it
-                self._log(
+                logger.warning(
                     "Invalid constraint ({}) found in {}-{} dependencies, "
                     "skipping".format(req, package.name, package.version),
-                    level="warning",
                 )
                 continue
 
@@ -200,7 +209,7 @@ class PackageInfo:
 
     @classmethod
     def _from_distribution(
-        cls, dist: Union[pkginfo.BDist, pkginfo.SDist, pkginfo.Wheel]
+            cls, dist: Union[pkginfo.BDist, pkginfo.SDist, pkginfo.Wheel]
     ) -> "PackageInfo":
         """
         Helper method to parse package information from a `pkginfo.Distribution` instance.
@@ -449,7 +458,7 @@ class PackageInfo:
             pass
 
         with ephemeral_environment(
-            with_pip=True, with_wheel=True, with_setuptools=True
+                with_pip=True, with_wheel=True, with_setuptools=True
         ) as venv:
             # TODO: cache PEP 517 build environment corresponding to each project venv
             dest_dir = venv.path.parent / "dist"

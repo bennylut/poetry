@@ -18,7 +18,6 @@ from poetry.utils._compat import decode
 from poetry.utils.helpers import is_dir_writable
 from poetry.utils.pip import pip_editable_install
 
-
 if TYPE_CHECKING:
     from cleo.io.io import IO  # noqa
 
@@ -45,7 +44,7 @@ class EditableBuilder(Builder):
         self._env = env
         self._io = io
 
-    def build(self) -> None:
+    def build(self, include_symlinks: bool = False) -> None:
         self._debug(
             "  - Building package <c1>{}</c1> in <info>editable</info> mode".format(
                 self._package.name
@@ -62,7 +61,7 @@ class EditableBuilder(Builder):
             self._run_build_script(self._package.build_script)
 
         for removed in self._env.site_packages.remove_distribution_files(
-            distribution_name=self._package.name
+                distribution_name=self._package.name
         ):
             self._debug(
                 "  - Removed <c2>{}</c2> directory from <b>{}</b>".format(
@@ -71,7 +70,7 @@ class EditableBuilder(Builder):
             )
 
         added_files = []
-        added_files += self._add_pth()
+        added_files += self._add_pth(include_symlinks)
         added_files += self._add_scripts()
         self._add_dist_info(added_files)
 
@@ -111,13 +110,15 @@ class EditableBuilder(Builder):
             if not has_setup:
                 os.remove(str(setup))
 
-    def _add_pth(self) -> List[Path]:
+    def _add_pth(self, include_symlinks: bool = False) -> List[Path]:
         paths = set()
+        link_targets = []
         for include in self._module.includes:
             if isinstance(include, PackageInclude) and (
                 include.is_module() or include.is_package()
             ):
                 paths.add(include.base.resolve().as_posix())
+                link_targets.append(include)
 
         content = ""
         for path in paths:
@@ -145,6 +146,15 @@ class EditableBuilder(Builder):
                     pth_file.name, pth_file.parent, self._poetry.file.parent
                 )
             )
+
+            if include_symlinks:
+                for link_target in link_targets:
+                    dst = self._env.site_packages.path.joinpath(link_target.package)
+                    src = link_target.base.joinpath(link_target.package)
+                    if dst.exists():
+                        dst.unlink()
+                    os.symlink(src, dst, src.is_dir())
+
             return [pth_file]
         except OSError:
             # TODO: Replace with PermissionError

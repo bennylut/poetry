@@ -39,6 +39,7 @@ MANIFEST.in
 pip-wheel-metadata
 /poetry.toml
 
-
 .idea
+
+# local test files
 dbg_tst.py

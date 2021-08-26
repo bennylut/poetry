@@ -529,6 +529,7 @@ class Installer:
                         ops.append(Uninstall(locked))
                     elif locked.version != installed.version:
                         ops.append(Update(installed, locked))
+                    break
 
             # If it's optional and not in required extras
             # we do not install
