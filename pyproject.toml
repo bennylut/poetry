@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "relaxed-poetry"
-version = "0.0.1"
+version = "0.0.2"
 description = "Poetry fork, Python dependency management and packaging made easy."
 authors = [
     "bennylut"
@@ -32,16 +32,12 @@ classifiers = [
 [tool.poetry.build]
 generate-setup-file = false
 
-[tool.relaxed-poetry.profiles]
-install="local-develop"
-update="local-develop"
-
 # Requirements
 
 [tool.poetry.dependencies]
 python = "^3.6"
 
-relaxed-poetry-core = "^0.0.3"
+relaxed-poetry-core = "^0.0.5"
 cleo = "^1.0.0a4"
 crashtest = "^0.3.0"
 requests = "^2.18"

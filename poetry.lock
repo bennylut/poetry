@@ -533,21 +533,16 @@ python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, !=3.5.*"
 
 [[package]]
 name = "relaxed-poetry-core"
-version = "0.0.3"
+version = "0.0.5"
 description = "Fork of poetry-core, with some relaxations"
 category = "main"
 optional = false
-python-versions = "^3.6"
-develop = true
+python-versions = ">=3.6,<4.0"
 
 [package.dependencies]
 dataclasses = {version = ">=0.8", markers = "python_version >= \"3.6\" and python_version < \"3.7\""}
 importlib-metadata = {version = ">=1.7.0", markers = "python_version < \"3.8\""}
-tomlkit = "^0.7.2"
-
-[package.source]
-type = "directory"
-url = "../poetry-core"
+tomlkit = ">=0.7.2,<0.8.0"
 
 [[package]]
 name = "requests"
@@ -709,7 +704,7 @@ testing = ["pytest (>=4.6)", "pytest-checkdocs (>=2.4)", "pytest-flake8", "pytes
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.6"
-content-hash = "15e2703373fc89fd6f65619948283c530d8e9fb6b0141a1bba78a007f78eaa53"
+content-hash = "0a8bea47daf5c5ccb30cfe18d736ab8a04ab4233d0f2b639ce3832d572f26bd7"
 
 [metadata.files]
 appdirs = [
@@ -1062,7 +1057,10 @@ pyyaml = [
     {file = "PyYAML-5.4.1-cp39-cp39-win_amd64.whl", hash = "sha256:c20cfa2d49991c8b4147af39859b167664f2ad4561704ee74c1de03318e898db"},
     {file = "PyYAML-5.4.1.tar.gz", hash = "sha256:607774cbba28732bfa802b54baa7484215f530991055bb562efbed5b2f20a45e"},
 ]
-relaxed-poetry-core = []
+relaxed-poetry-core = [
+    {file = "relaxed-poetry-core-0.0.5.tar.gz", hash = "sha256:08fae741e0869ebe2b453744a4378e22161221ccdadbab786db434528c5ca38d"},
+    {file = "relaxed_poetry_core-0.0.5-py3-none-any.whl", hash = "sha256:55afd83a37ef1ad04f0bcaf85aa80fda7cace7bdf4b78553679bf3d8c4e74d20"},
+]
 requests = [
     {file = "requests-2.26.0-py2.py3-none-any.whl", hash = "sha256:6c1246513ecd5ecd4528a0906f910e8f0f9c6b8ec72030dc9fd154dc1a6efd24"},
     {file = "requests-2.26.0.tar.gz", hash = "sha256:b8aa58f8cf793ffd8782d3d8cb19e66ef36f7aba4353eec859e74678b01b07a7"},

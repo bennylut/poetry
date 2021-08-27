@@ -2,6 +2,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 from typing import List
 
+from poetry.core.pyproject.toml import PyProjectTOML
+
 from poetry.__version__ import __version__
 from poetry.config.source import Source
 from poetry.core.poetry import Poetry as BasePoetry
@@ -23,14 +25,14 @@ class Poetry(BasePoetry):
     def __init__(
         self,
         file: Path,
-        local_config: dict,
+        pyproject: PyProjectTOML,
         package: "ProjectPackage",
         locker: "Locker",
         config: "Config",
     ):
         from .repositories.pool import Pool  # noqa
 
-        super(Poetry, self).__init__(file, local_config, package)
+        super(Poetry, self).__init__(file, pyproject, package)
 
         self._locker = locker
         self._config = config

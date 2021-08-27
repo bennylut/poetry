@@ -11,6 +11,7 @@ from cleo.io.io import IO
 from cleo.io.null_io import NullIO
 
 from poetry.core.factory import Factory as BaseFactory
+from poetry.core.pyproject.profiles import ProfilesActivationData
 from poetry.core.toml.file import TOMLFile
 
 from .config.config import Config
@@ -37,7 +38,7 @@ class Factory(BaseFactory):
         cwd: Optional[Path] = None,
         io: Optional[IO] = None,
         disable_plugins: bool = False,
-        profiles: Optional[List[str]] = None
+        profiles: Optional[ProfilesActivationData] = None
     ) -> Poetry:
         if io is None:
             io = NullIO()
@@ -75,7 +76,7 @@ class Factory(BaseFactory):
 
         poetry = Poetry(
             base_poetry.file.path,
-            base_poetry.local_config,
+            base_poetry.pyproject,
             base_poetry.package,
             locker,
             config,

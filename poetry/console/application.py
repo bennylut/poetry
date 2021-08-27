@@ -20,6 +20,7 @@ from cleo.io.inputs.input import Input
 from cleo.io.inputs.option import Option
 from cleo.io.io import IO
 from cleo.io.outputs.output import Output
+from poetry.core.pyproject.profiles import ProfilesActivationData
 
 from poetry.__version__ import __version__
 
@@ -114,7 +115,7 @@ class Application(BaseApplication):
         self.set_command_loader(command_loader)
 
         self.definition.add_option(Option(
-            "profile", None,
+            "profiles", None,
             description="resolve pyproject using the given comma separated list of profile names.",
             flag=False))
 
@@ -127,12 +128,11 @@ class Application(BaseApplication):
         if self._poetry is not None:
             return self._poetry
 
-        profiles = [s for s in (self._io.input.option("profile") or "").split(",") if len(s) > 0]
-        if len(profiles) == 0:
-            profiles.append(f"?{self._running_command.name}")
+        manual_profiles = [s for s in (self._io.input.option("profiles") or "").split(",") if len(s) > 0]
+        profile_activation = ProfilesActivationData(manual_profiles, self._running_command.name)
 
         self._poetry = Factory().create_poetry(
-            Path.cwd(), io=self._io, disable_plugins=self._disable_plugins, profiles=profiles
+            Path.cwd(), io=self._io, disable_plugins=self._disable_plugins, profiles=profile_activation
         )
 
         return self._poetry
