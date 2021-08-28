@@ -449,7 +449,7 @@ class Installer:
         """
         self._write(
             "Installing {} ({})".format(
-                colorize("info", "Poetry"), colorize("info", version)
+                colorize("info", "Relaxed Poetry"), colorize("info", version)
             )
         )
 
@@ -459,7 +459,7 @@ class Installer:
 
         self._overwrite(
             "Installing {} ({}): {}".format(
-                colorize("info", "Poetry"),
+                colorize("info", "Relaxed Poetry"),
                 colorize("b", version),
                 colorize("success", "Done"),
             )
@@ -472,7 +472,7 @@ class Installer:
     def uninstall(self) -> int:
         if not self._data_dir.exists():
             self._write(
-                "{} is not currently installed.".format(colorize("info", "Poetry"))
+                "{} is not currently installed.".format(colorize("info", "Relaxed Poetry"))
             )
 
             return 1
@@ -484,11 +484,11 @@ class Installer:
         if version:
             self._write(
                 "Removing {} ({})".format(
-                    colorize("info", "Poetry"), colorize("b", version)
+                    colorize("info", "Relaxed Poetry"), colorize("b", version)
                 )
             )
         else:
-            self._write("Removing {}".format(colorize("info", "Poetry")))
+            self._write("Removing {}".format(colorize("info", "Relaxed Poetry")))
 
         shutil.rmtree(str(self._data_dir))
         for script in ["poetry", "poetry.bat"]:
@@ -500,7 +500,7 @@ class Installer:
     def make_env(self, version: str) -> Path:
         self._overwrite(
             "Installing {} ({}): {}".format(
-                colorize("info", "Poetry"),
+                colorize("info", "Relaxed Poetry"),
                 colorize("b", version),
                 colorize("comment", "Creating environment"),
             )
