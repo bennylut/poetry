@@ -21,11 +21,10 @@ if TYPE_CHECKING:
 class SelfUpdateCommand(Command):
 
     name = "self update"
-    description = "Updates Poetry to the latest version."
+    description = "Updates Relaxed-Poetry to the latest version."
 
     arguments = [argument("version", "The version to update to.", optional=True)]
     options = [
-        option("preview", None, "Allow the installation of pre-release versions."),
         option(
             "dry-run",
             None,
@@ -56,8 +55,8 @@ class SelfUpdateCommand(Command):
 
         from poetry.utils._compat import WINDOWS
 
-        if os.getenv("POETRY_HOME"):
-            return Path(os.getenv("POETRY_HOME"), "bin").expanduser()
+        if os.getenv("RP_HOME"):
+            return Path(os.getenv("RP_HOME"), "bin").expanduser()
 
         user_base = site.getuserbase()
 
@@ -94,7 +93,7 @@ class SelfUpdateCommand(Command):
 
         repo = self.pool.repositories[0]
         packages = repo.find_packages(
-            Dependency("poetry", version, allows_prereleases=self.option("preview"))
+            Dependency("relaxed-poetry", version)
         )
         if not packages:
             self.line("No release found for the specified version")
@@ -108,19 +107,7 @@ class SelfUpdateCommand(Command):
             )
         )
 
-        release = None
-        for package in packages:
-            if package.is_prerelease():
-                if self.option("preview"):
-                    release = package
-
-                    break
-
-                continue
-
-            release = package
-
-            break
+        release = packages[0] if len(packages) > 0 else None
 
         if release is None:
             self.line("No new release found")
@@ -130,14 +117,14 @@ class SelfUpdateCommand(Command):
             self.line("You are using the latest version")
             return 0
 
-        self.line("Updating <c1>Poetry</c1> to <c2>{}</c2>".format(release.version))
+        self.line("Updating <c1>Relaxed-Poetry</c1> to <c2>{}</c2>".format(release.version))
         self.line("")
 
         self.update(release)
 
         self.line("")
         self.line(
-            "<c1>Poetry</c1> (<c2>{}</c2>) is installed now. Great!".format(
+            "<c1>Relaxed-Poetry</c1> (<c2>{}</c2>) is installed now. Great!".format(
                 release.version
             )
         )
@@ -180,7 +167,7 @@ class SelfUpdateCommand(Command):
 
         root = ProjectPackage("poetry-updater", "0.0.0")
         root.python_versions = ".".join(str(c) for c in env.version_info[:3])
-        root.add_dependency(Dependency("poetry", version.text))
+        root.add_dependency(Dependency("relaxed-poetry", version.text))
 
         installer = Installer(
             self.io,
@@ -199,14 +186,14 @@ class SelfUpdateCommand(Command):
         from poetry.utils._compat import WINDOWS
 
         self.line("")
-        self.line("Updating the <c1>poetry</c1> script")
+        self.line("Updating the <c1>rp</c1> script")
 
         self.bin_dir.mkdir(parents=True, exist_ok=True)
 
-        script = "poetry"
+        script = "rp"
         target_script = "venv/bin/poetry"
         if WINDOWS:
-            script = "poetry.exe"
+            script = "rp.exe"
             target_script = "venv/Scripts/poetry.exe"
 
         if self.bin_dir.joinpath(script).exists():

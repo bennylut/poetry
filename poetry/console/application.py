@@ -98,7 +98,7 @@ if TYPE_CHECKING:
 
 class Application(BaseApplication):
     def __init__(self) -> None:
-        super().__init__("poetry", __version__)
+        super().__init__("relaxed-poetry", __version__)
 
         self._poetry = None
         self._io: Optional[IO] = None
