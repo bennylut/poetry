@@ -47,6 +47,7 @@ class BuildCommand(EnvCommand):
             bounds = solver.solve().calculate_interpreter_bounds(package.python_constraint)
             bounds_constraint_str = format_python_constraint(bounds)
             self.poetry.package.python_versions=bounds_constraint_str
+            self._poetry.pyproject.data["tool"]["poetry"]["dependencies"]["python"] = bounds_constraint_str
 
             self._io.write_line(f"Will require python version: {bounds_constraint_str}")
 
