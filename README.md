@@ -6,12 +6,13 @@ Poetry is a great tool and was a perfect fit for my team. Over the time, we foun
 Since, in my eyes, there is no real alternative to poetry, I choose to fork it and include some relaxations for the issues that we encounter. While I'm at it, I also modified some of poetry's behavior and added some features that suite our workflows and views better.
 
 All of the changes that were made in this fork are documented in the wiki, the followings are some notable ones:
+- Forced dependency versions 
+- Relaxation of python version-constraint for dependent packages (e.g., 3.5.* results in warning and not an error)
 - `virtualenvs.in-project` is true by default
 - new configuration: `virtualenvs.symlinks-on-path-deps` similar to `flit install --symlink`
 - property definition and substitution in pyproject 
 - automatic and manual build profiles (override groups of properties in pyproject)
-- Relaxation of python version-constraint for dependent packages (e.g., 3.5.* results in warning and not an error)
-- Secondery source is used only if a dependency definition explicitly specifies it in it's source parameter.
+- Only explicit secondery source usage.
  
 See wiki for further details.
 
