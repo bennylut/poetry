@@ -39,7 +39,7 @@ class _Writer:
             if isinstance(incompatibility.cause, PythonCause):
                 if not required_python_version_notification:
                     buffer.append(
-                        "The current project's Python requirement ({}) "
+                        "The installed project's Python version ({}) "
                         "is not compatible with some of the required "
                         "packages Python requirement:".format(
                             incompatibility.cause.root_python_version

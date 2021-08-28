@@ -84,7 +84,9 @@ class DebugResolveCommand(InitCommand):
 
         pool = self.poetry.pool
 
-        solver = Solver(package, pool, Repository(), Repository(), self._io)
+        env = EnvManager(self.poetry).get()
+
+        solver = Solver(package, pool, Repository(), Repository(), self._io, env)
 
         ops = solver.solve().calculate_operations()
 
@@ -113,7 +115,6 @@ class DebugResolveCommand(InitCommand):
         rows = []
 
         if self.option("install"):
-            env = EnvManager(self.poetry).get()
             pool = Pool()
             locked_repository = Repository()
             for op in ops:
@@ -121,7 +122,7 @@ class DebugResolveCommand(InitCommand):
 
             pool.add_repository(locked_repository)
 
-            solver = Solver(package, pool, Repository(), Repository(), NullIO())
+            solver = Solver(package, pool, Repository(), Repository(), NullIO(), env)
             with solver.use_environment(env):
                 ops = solver.solve().calculate_operations()
 

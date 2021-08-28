@@ -122,7 +122,7 @@ class MakeReleaseCommand(Command):
                     EnvManager.build_venv(venv_dir.as_posix(), executable=python)
 
                     env = VirtualEnv(venv_dir, venv_dir)
-                    solver = Solver(package, pool, Repository(), Repository(), self.io)
+                    solver = Solver(package, pool, Repository(), Repository(), self.io, env)
                     with solver.use_environment(env):
                         ops = solver.solve()
                         for op in ops:

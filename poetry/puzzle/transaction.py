@@ -3,6 +3,7 @@ from typing import List
 from typing import Optional
 from typing import Tuple
 
+from poetry.core.semver.version_constraint import VersionConstraint
 
 if TYPE_CHECKING:
     from poetry.core.packages.package import Package
@@ -111,3 +112,10 @@ class Transaction:
                 o.package.version,
             ),
         )
+
+    def calculate_interpreter_bounds(self, base_bounds: VersionConstraint):
+        bounds = base_bounds
+        ops = self.calculate_operations(with_uninstalls=False)
+        for op in ops:
+            bounds = bounds.intersect(op.package.python_constraint)
+        return bounds

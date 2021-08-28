@@ -209,6 +209,7 @@ class Installer:
             locked_repository,
             locked_repository,
             self._io,
+            self._env
         )
 
         ops = solver.solve(use_latest=[]).calculate_operations()
@@ -246,6 +247,7 @@ class Installer:
                 self._installed_repository,
                 locked_repository,
                 self._io,
+                self._env
             )
 
             ops = solver.solve(use_latest=self._whitelist).calculate_operations()
@@ -316,7 +318,7 @@ class Installer:
         pool.add_repository(repo)
 
         solver = Solver(
-            root, pool, self._installed_repository, locked_repository, NullIO()
+            root, pool, self._installed_repository, locked_repository, NullIO(), self._env
         )
         # Everything is resolved at this point, so we no longer need
         # to load deferred dependencies (i.e. VCS, URL and path dependencies)

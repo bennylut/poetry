@@ -46,6 +46,7 @@ class Solver:
         installed: Repository,
         locked: Repository,
         io: IO,
+        env: Env,
         provider: Optional[Provider] = None,
     ):
         self._package = package
@@ -55,7 +56,7 @@ class Solver:
         self._io = io
 
         if provider is None:
-            provider = Provider(self._package, self._pool, self._io)
+            provider = Provider(self._package, self._pool, self._io, env)
 
         self._provider = provider
         self._overrides = []

@@ -28,7 +28,7 @@ class PythonRequirementSolution(Solution):
                     "For <fg=default;options=bold>{}</>, a possible solution would be "
                     'to set the `<fg=default;options=bold>python</>` property to <fg=yellow>"{}"</>'.format(
                         incompatibility.terms[0].dependency.name,
-                        root_constraint.intersect(constraint),
+                        constraint,
                     )
                 )
 

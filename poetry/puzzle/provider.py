@@ -23,6 +23,7 @@ from poetry.core.packages.package import Package
 from poetry.core.packages.url_dependency import URLDependency
 from poetry.core.packages.utils.utils import get_python_constraint_from_marker
 from poetry.core.packages.vcs_dependency import VCSDependency
+from poetry.core.semver.helpers import parse_constraint, VersionTypes
 from poetry.core.semver.version import Version
 from poetry.core.vcs.git import Git
 from poetry.core.version.markers import MarkerUnion
@@ -52,6 +53,10 @@ class Indicator(ProgressIndicator):
         return f"{elapsed:.1f}s"
 
 
+def _installed_python_version_constraint(env: Env) -> VersionTypes :
+    i = env.version_info
+    return parse_constraint(f"={i[0]}.{i[1]}.{i[2]}")
+
 class Provider:
 
     UNSAFE_PACKAGES = set()
@@ -64,6 +69,7 @@ class Provider:
         self._io = io
         self._env = env
         self._python_constraint = package.python_constraint
+        self._installed_python_constraint = _installed_python_version_constraint(env) if env else None
         self._search_for = {}
         self._is_debugging = self._io.is_debug() or self._io.is_very_verbose()
         self._in_progress = False
@@ -88,14 +94,17 @@ class Provider:
     def use_environment(self, env: Env) -> "Provider":
         original_env = self._env
         original_python_constraint = self._python_constraint
+        original_installed_python_constraint = self._installed_python_constraint
 
         self._env = env
         self._python_constraint = Version.parse(env.marker_env["python_full_version"])
+        self._installed_python_constraint = _installed_python_version_constraint(env)
 
         yield self
 
         self._env = original_env
         self._python_constraint = original_python_constraint
+        self._installed_python_constraint = original_installed_python_constraint
 
     def search_for(
         self,
@@ -372,34 +381,16 @@ class Provider:
         else:
             dependencies = package.requires
 
-            if not package.python_constraint.allows_all(self._python_constraint):
-                transitive_python_constraint = get_python_constraint_from_marker(
-                    package.dependency.transitive_marker
-                )
-                intersection = package.python_constraint.intersect(
-                    transitive_python_constraint
-                )
-                difference = transitive_python_constraint.difference(intersection)
+            if package.python_constraint.intersect(self._installed_python_constraint).is_empty():
+                return [
+                    Incompatibility(
+                        [Term(package.to_dependency(), True)],
+                        PythonCause(
+                            package.python_versions, str(self._installed_python_constraint)
+                        ),
+                    )
+                ]
 
-                # The difference is only relevant if it intersects
-                # the root package python constraint
-                difference = difference.intersect(self._python_constraint)
-                if (
-                    transitive_python_constraint.is_any()
-                    or self._python_constraint.intersect(
-                        package.dependency.python_constraint
-                    ).is_empty()
-                    or intersection.is_empty()
-                    or not difference.is_empty()
-                ):
-                    return [
-                        Incompatibility(
-                            [Term(package.to_dependency(), True)],
-                            PythonCause(
-                                package.python_versions, str(self._python_constraint)
-                            ),
-                        )
-                    ]
 
         _dependencies = [
             forced_versions.get(dep.name, dep)
