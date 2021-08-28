@@ -5,12 +5,12 @@ It does, in order:
 
   - Downloads the virtualenv package to a temporary directory and add it to sys.path.
   - Creates a virtual environment in the correct OS data dir which will be
-      - `%APPDATA%\\pypoetry` on Windows
-      -  ~/Library/Application Support/pypoetry on MacOS
-      - `${XDG_DATA_HOME}/pypoetry` (or `~/.local/share/pypoetry` if it's not set) on UNIX systems
-      - In `${POETRY_HOME}` if it's set.
+      - `%APPDATA%\\relaxed-poetry` on Windows
+      -  ~/Library/Application Support/relaxed-poetry on MacOS
+      - `${XDG_DATA_HOME}/relaxed-poetry` (or `~/.local/share/relaxed-poetry` if it's not set) on UNIX systems
+      - In `${RP_HOME}` if it's set.
   - Installs the latest or given version of Poetry inside this virtual environment.
-  - Installs a `poetry` script in the Python user directory (or `${POETRY_HOME/bin}` if `POETRY_HOME` is set).
+  - Installs a `poetry` script in the Python user directory (or `${RP_HOME/bin}` if `RP_HOME` is set).
 """
 
 import argparse
@@ -132,18 +132,18 @@ def string_to_bool(value):
 
 
 def data_dir(version: Optional[str] = None) -> Path:
-    if os.getenv("POETRY_HOME"):
-        return Path(os.getenv("POETRY_HOME")).expanduser()
+    if os.getenv("RP_HOME"):
+        return Path(os.getenv("RP_HOME")).expanduser()
 
     if WINDOWS:
         const = "CSIDL_APPDATA"
         path = os.path.normpath(_get_win_folder(const))
-        path = os.path.join(path, "pypoetry")
+        path = os.path.join(path, "relaxed-poetry")
     elif MACOS:
         path = os.path.expanduser("~/Library/Application Support/pypoetry")
     else:
         path = os.getenv("XDG_DATA_HOME", os.path.expanduser("~/.local/share"))
-        path = os.path.join(path, "pypoetry")
+        path = os.path.join(path, "relaxed-poetry")
 
     if version:
         path = os.path.join(path, version)
@@ -152,8 +152,8 @@ def data_dir(version: Optional[str] = None) -> Path:
 
 
 def bin_dir(version: Optional[str] = None) -> Path:
-    if os.getenv("POETRY_HOME"):
-        return Path(os.getenv("POETRY_HOME"), "bin").expanduser()
+    if os.getenv("RP_HOME"):
+        return Path(os.getenv("RP_HOME"), "bin").expanduser()
 
     user_base = site.getuserbase()
 
@@ -239,9 +239,9 @@ PRE_MESSAGE = """# Welcome to {poetry}!
 This will download and install the latest version of {poetry},
 a dependency and package manager for Python.
 
-It will add the `poetry` command to {poetry}'s bin directory, located at:
+It will add the `rp` command to {poetry}'s bin directory, located at:
 
-{poetry_home_bin}
+{RP_HOME_bin}
 
 You can uninstall at any time by executing this script with the --uninstall option,
 and these changes will be reverted.
@@ -256,7 +256,7 @@ You can test that everything is set up by executing:
 
 POST_MESSAGE_NOT_IN_PATH = """{poetry} ({version}) is installed now. Great!
 
-To get started you need {poetry}'s bin directory ({poetry_home_bin}) in your `PATH`
+To get started you need {poetry}'s bin directory ({RP_HOME_bin}) in your `PATH`
 environment variable.
 {configure_message}
 Alternatively, you can call {poetry} explicitly with `{poetry_executable}`.
@@ -267,11 +267,11 @@ You can test that everything is set up by executing:
 """
 
 POST_MESSAGE_CONFIGURE_UNIX = """
-Add `export PATH="{poetry_home_bin}:$PATH"` to your shell configuration file.
+Add `export PATH="{RP_HOME_bin}:$PATH"` to your shell configuration file.
 """
 
 POST_MESSAGE_CONFIGURE_FISH = """
-You can execute `set -U fish_user_paths {poetry_home_bin} $fish_user_paths`
+You can execute `set -U fish_user_paths {RP_HOME_bin} $fish_user_paths`
 """
 
 POST_MESSAGE_CONFIGURE_WINDOWS = """"""
@@ -366,7 +366,7 @@ class Cursor:
 
 
 class Installer:
-    METADATA_URL = "https://pypi.org/pypi/poetry/json"
+    METADATA_URL = "https://pypi.org/pypi/relaxed-poetry/json"
     VERSION_REGEX = re.compile(
         r"v?(\d+)(?:\.(\d+))?(?:\.(\d+))?(?:\.(\d+))?"
         "("
@@ -414,14 +414,7 @@ class Installer:
         self.ensure_directories()
 
         def _is_self_upgrade_supported(x):
-            mx = self.VERSION_REGEX.match(x)
-
-            if mx is None:
-                # the version is not semver, perhaps scm or file, we assume upgrade is supported
-                return True
-
-            vx = tuple(int(p) for p in mx.groups()[:3]) + (mx.group(5),)
-            return vx >= (1, 1, 7)
+            return True
 
         if version and not _is_self_upgrade_supported(version):
             self._write(
@@ -452,7 +445,7 @@ class Installer:
 
     def install(self, version, upgrade=False):
         """
-        Installs Poetry in $POETRY_HOME.
+        Installs Poetry in $RP_HOME.
         """
         self._write(
             "Installing {} ({})".format(
@@ -533,7 +526,7 @@ class Installer:
     def make_bin(self, version: str) -> None:
         self._overwrite(
             "Installing {} ({}): {}".format(
-                colorize("info", "Poetry"),
+                colorize("info", "Relaxed-Poetry"),
                 colorize("b", version),
                 colorize("comment", "Creating script"),
             )
@@ -541,7 +534,7 @@ class Installer:
 
         self._bin_dir.mkdir(parents=True, exist_ok=True)
 
-        script = "poetry"
+        script = "rp"
         target_script = "venv/bin/poetry"
         if WINDOWS:
             script = "poetry.exe"
@@ -564,7 +557,7 @@ class Installer:
     def install_poetry(self, version: str, env_path: Path) -> None:
         self._overwrite(
             "Installing {} ({}): {}".format(
-                colorize("info", "Poetry"),
+                colorize("info", "Relaxed-Poetry"),
                 colorize("b", version),
                 colorize("comment", "Installing Poetry"),
             )
@@ -580,7 +573,7 @@ class Installer:
         elif self._path:
             specification = version
         else:
-            specification = f"poetry=={version}"
+            specification = f"relaxed-poetry=={version}"
 
         subprocess.run(
             [str(python), "-m", "pip", "install", specification],
@@ -591,8 +584,8 @@ class Installer:
 
     def display_pre_message(self) -> None:
         kwargs = {
-            "poetry": colorize("info", "Poetry"),
-            "poetry_home_bin": colorize("comment", self._bin_dir),
+            "poetry": colorize("info", "Relaxed-Poetry"),
+            "RP_HOME_bin": colorize("comment", self._bin_dir),
         }
         self._write(PRE_MESSAGE.format(**kwargs))
 
@@ -614,14 +607,14 @@ class Installer:
 
         self._write(
             message.format(
-                poetry=colorize("info", "Poetry"),
+                poetry=colorize("info", "Relaxed-Poetry"),
                 version=colorize("b", version),
-                poetry_home_bin=colorize("comment", self._bin_dir),
+                RP_HOME_bin=colorize("comment", self._bin_dir),
                 poetry_executable=colorize("b", self._bin_dir.joinpath("poetry")),
                 configure_message=POST_MESSAGE_CONFIGURE_WINDOWS.format(
-                    poetry_home_bin=colorize("comment", self._bin_dir)
+                    RP_HOME_bin=colorize("comment", self._bin_dir)
                 ),
-                test_command=colorize("b", "poetry --version"),
+                test_command=colorize("b", "rp --version"),
             )
         )
 
@@ -645,14 +638,14 @@ class Installer:
 
         self._write(
             message.format(
-                poetry=colorize("info", "Poetry"),
+                poetry=colorize("info", "Relaxed-Poetry"),
                 version=colorize("b", version),
-                poetry_home_bin=colorize("comment", self._bin_dir),
+                RP_HOME_bin=colorize("comment", self._bin_dir),
                 poetry_executable=colorize("b", self._bin_dir.joinpath("poetry")),
                 configure_message=POST_MESSAGE_CONFIGURE_FISH.format(
-                    poetry_home_bin=colorize("comment", self._bin_dir)
+                    RP_HOME_bin=colorize("comment", self._bin_dir)
                 ),
-                test_command=colorize("b", "poetry --version"),
+                test_command=colorize("b", "rp --version"),
             )
         )
 
@@ -665,14 +658,14 @@ class Installer:
 
         self._write(
             message.format(
-                poetry=colorize("info", "Poetry"),
+                poetry=colorize("info", "Relaxed-Poetry"),
                 version=colorize("b", version),
-                poetry_home_bin=colorize("comment", self._bin_dir),
+                RP_HOME_bin=colorize("comment", self._bin_dir),
                 poetry_executable=colorize("b", self._bin_dir.joinpath("poetry")),
                 configure_message=POST_MESSAGE_CONFIGURE_UNIX.format(
-                    poetry_home_bin=colorize("comment", self._bin_dir)
+                    RP_HOME_bin=colorize("comment", self._bin_dir)
                 ),
-                test_command=colorize("b", "poetry --version"),
+                test_command=colorize("b", "rp --version"),
             )
         )
 
@@ -759,14 +752,14 @@ def main():
     parser = argparse.ArgumentParser(
         description="Installs the latest (or given) version of poetry"
     )
-    parser.add_argument(
-        "-p",
-        "--preview",
-        help="install preview version",
-        dest="preview",
-        action="store_true",
-        default=False,
-    )
+    # parser.add_argument(
+    #     "-p",
+    #     "--preview",
+    #     help="install preview version",
+    #     dest="preview",
+    #     action="store_true",
+    #     default=False,
+    # )
     parser.add_argument("--version", help="install named version", dest="version")
     parser.add_argument(
         "-f",
@@ -786,7 +779,7 @@ def main():
     )
     parser.add_argument(
         "--uninstall",
-        help="uninstall poetry",
+        help="uninstall relaxed-poetry",
         dest="uninstall",
         action="store_true",
         default=False,
@@ -814,7 +807,7 @@ def main():
 
     installer = Installer(
         version=args.version or os.getenv("POETRY_VERSION"),
-        preview=args.preview or string_to_bool(os.getenv("POETRY_PREVIEW", "0")),
+        preview=False,
         force=args.force,
         accept_all=args.accept_all
         or string_to_bool(os.getenv("POETRY_ACCEPT", "0"))

@@ -33,7 +33,7 @@ packages = []
 [tool.poetry.group.dev.dependencies]
 """
 
-BUILD_SYSTEM_MIN_VERSION: Optional[str] = None
+BUILD_SYSTEM_MIN_VERSION: Optional[str] = "0.0.6"
 BUILD_SYSTEM_MAX_VERSION: Optional[str] = None
 
 
@@ -162,7 +162,7 @@ class Layout:
                 build_system_version += ","
             build_system_version += "<" + BUILD_SYSTEM_MAX_VERSION
 
-        build_system.add("requires", ["poetry-core" + build_system_version])
+        build_system.add("requires", ["relaxed-poetry-core" + build_system_version])
         build_system.add("build-backend", "poetry.core.masonry.api")
 
         content.add("build-system", build_system)
