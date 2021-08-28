@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "relaxed-poetry"
-version = "0.0.3"
+version = "0.0.4"
 description = "Poetry fork, Python dependency management and packaging made easy."
 authors = [
     "bennylut"
@@ -73,7 +73,7 @@ poetry = "poetry.console.application:main"
 
 
 [build-system]
-requires = ["relaxed-poetry-core>=0.0.3"]
+requires = ["relaxed-poetry-core>=0.0.6"]
 build-backend = "poetry.core.masonry.api"
 
 
