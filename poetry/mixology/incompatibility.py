@@ -163,7 +163,7 @@ class Incompatibility:
             assert not self._terms[0].is_positive()
             assert self._terms[0].dependency.is_root
 
-            return "{} is {}".format(
+            return "{} is not {}".format(
                 self._terms[0].dependency.name, self._terms[0].dependency.constraint
             )
         elif self.is_failure():

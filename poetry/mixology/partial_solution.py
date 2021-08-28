@@ -50,6 +50,12 @@ class PartialSolution:
         # Whether the solver is currently backtracking.
         self._backtracking = False
 
+    def __str__(self):
+        return str(self._assignments)
+
+    def __repr__(self):
+        return f"<PartialSolution {self}>"
+
     @property
     def decisions(self) -> List["Package"]:
         return list(self._decisions.values())

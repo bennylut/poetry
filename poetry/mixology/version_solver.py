@@ -57,6 +57,7 @@ class VersionSolver:
 
         self._incompatibilities: Dict[str, List[Incompatibility]] = {}
         self._solution = PartialSolution()
+        self._forced_versions = {dependency.name:dependency for dependency in root.all_requires if dependency.forced_version}
 
     @property
     def solution(self) -> PartialSolution:
@@ -394,7 +395,7 @@ class VersionSolver:
         version = self._provider.complete_package(version)
 
         conflict = False
-        for incompatibility in self._provider.incompatibilities_for(version):
+        for incompatibility in self._provider.incompatibilities_for(version, self._forced_versions):
             self._add_incompatibility(incompatibility)
 
             # If an incompatibility is already satisfied, then selecting version

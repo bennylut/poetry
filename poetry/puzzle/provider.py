@@ -355,7 +355,8 @@ class Provider:
         return package
 
     def incompatibilities_for(
-        self, package: DependencyPackage
+        self, package: DependencyPackage,
+        forced_versions: Dict[str, Dependency]
     ) -> List[Incompatibility]:
         """
         Returns incompatibilities that encapsulate a given package's dependencies,
@@ -401,7 +402,7 @@ class Provider:
                     ]
 
         _dependencies = [
-            dep
+            forced_versions.get(dep.name, dep)
             for dep in dependencies
             if dep.name not in self.UNSAFE_PACKAGES
             and self._python_constraint.allows_any(dep.python_constraint)
