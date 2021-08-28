@@ -1,4 +1,7 @@
 # Relaxed Poetry
+
+> ℹ️ For installation instructions check the [Wiki](https://github.com/bennylut/relaxed-poetry/wiki/Installation)
+
 This project is a poetry fork. It serves as a relaxed version of poetry (currently based on version 1.2.0a2).
 
 Poetry is a great tool and was a perfect fit for my team. Over the time, we found several issues where it is a bit too strict, and while most of the time for good reasons, these issues still made poetry unusable for us in many projects.
