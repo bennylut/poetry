@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "relaxed-poetry"
-version = "0.0.5"
-description = "Poetry fork, Python dependency management and packaging made easy."
+version = "0.0.6"
+description = "Fork of Poetry (Python dependency management and packaging tool), attempts to be faster and less strict."
 authors = [
     "bennylut"
 ]

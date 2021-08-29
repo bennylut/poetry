@@ -11,15 +11,15 @@ Since, in my eyes, there is no real alternative to poetry, I choose to fork it a
 All of the changes that were made in this fork are documented in the wiki, the followings are some notable ones:
 - Forced dependency versions 
 - Relaxation of version-enforcements
+- Faster dependency-versions resolution (~4 times faster on tested projects)
 - `virtualenvs.in-project` is true by default
 - new configuration: `virtualenvs.symlinks-on-path-deps` similar to `flit install --symlink`
 - property definition and substitution in pyproject 
 - automatic and manual build profiles (override groups of properties in pyproject)
-- Only explicit secondery source usage.
  
 See wiki for further details.
 
-**Important**: this package is itself in alpha stage and is based on alpha staged poetry, changes may be frequent, 
+**Important**: this package is based on alpha staged poetry, changes may be frequent, 
 though it is planed to be used internally for our projects from day one.
 
 **The rest of this README left as is from the original Poetry README**
