@@ -10,7 +10,7 @@ Since, in my eyes, there is no real alternative to poetry, I choose to fork it a
 
 All of the changes that were made in this fork are documented in the wiki, the followings are some notable ones:
 - Forced dependency versions 
-- Relaxation of python version-constraint for dependent packages (e.g., 3.5.* results in warning and not an error)
+- Relaxation of version-enforcements
 - `virtualenvs.in-project` is true by default
 - new configuration: `virtualenvs.symlinks-on-path-deps` similar to `flit install --symlink`
 - property definition and substitution in pyproject 
