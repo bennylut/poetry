@@ -326,9 +326,7 @@ class LegacyRepository(PyPiRepository):
         should be much faster.
         """
         try:
-            print(f"Start Downloading {name} {version} (for large packages this may take some time) ...")
             index = self._packages.index(Package(name, version, version))
-            print(f"Done Downloading {name} {version}")
             return self._packages[index]
         except ValueError:
             package = super().package(name, version, extras)
