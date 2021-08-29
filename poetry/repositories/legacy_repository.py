@@ -1,6 +1,7 @@
 import cgi
 import hashlib
 import re
+import threading
 import urllib.parse
 import warnings
 
@@ -199,9 +200,8 @@ class LegacyRepository(PyPiRepository):
             config=config or Config(use_environment=True)
         )
 
-        self._session = CacheControl(
-            self._authenticator.session, cache=FileCache(str(self._cache_dir / "_http"))
-        )
+        self._cache_control_cache = FileCache(str(self._cache_dir / "_http"))
+        self._tl = threading.local()
 
         username, password = self._authenticator.get_credentials_for_url(self._url)
         if username is not None and password is not None:
@@ -227,15 +227,15 @@ class LegacyRepository(PyPiRepository):
 
     @property
     def authenticated_url(self) -> str:
-        if not self._session.auth:
+        if not self.session.auth:
             return self.url
 
         parsed = urllib.parse.urlparse(self.url)
 
         return "{scheme}://{username}:{password}@{netloc}{path}".format(
             scheme=parsed.scheme,
-            username=quote(self._session.auth.username, safe=""),
-            password=quote(self._session.auth.password, safe=""),
+            username=quote(self.session.auth.username, safe=""),
+            password=quote(self.session.auth.password, safe=""),
             netloc=parsed.netloc,
             path=parsed.path,
         )

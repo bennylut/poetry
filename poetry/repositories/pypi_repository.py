@@ -1,5 +1,6 @@
 import logging
 import os
+import threading
 import urllib.parse
 
 from collections import defaultdict
@@ -73,15 +74,20 @@ class PyPiRepository(RemoteRepository):
         )
 
         self._cache_control_cache = FileCache(str(release_cache_dir / "_http"))
-        self._session = CacheControl(
-            requests.session(), cache=self._cache_control_cache
-        )
+        self._tl = threading.local()
 
         self._name = "PyPI"
 
     @property
     def session(self) -> CacheControl:
-        return self._session
+        try:
+            return self._tl.session
+        except AttributeError:
+            self._tl.session = CacheControl(
+                requests.session(), cache=self._cache_control_cache
+            )
+
+            return self._tl.session
 
     def find_packages(self, dependency: Dependency) -> List[Package]:
         """

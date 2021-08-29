@@ -26,7 +26,6 @@ from .term import Term
 if TYPE_CHECKING:
     from poetry.puzzle.provider import Provider
 
-
 _conflict = object()
 
 
@@ -46,6 +45,8 @@ class VersionSolver:
         locked: Dict[str, Package] = None,
         use_latest: List[str] = None,
     ):
+        from .version_prefetcher import VersionPrefetcher
+
         self._root = root
         self._provider = provider
         self._locked = locked or {}
@@ -58,6 +59,7 @@ class VersionSolver:
         self._incompatibilities: Dict[str, List[Incompatibility]] = {}
         self._solution = PartialSolution()
         self._forced_versions = {dependency.name:dependency for dependency in root.all_requires if dependency.forced_version}
+        self._prefetcher = VersionPrefetcher(self)
 
     @property
     def solution(self) -> PartialSolution:
@@ -80,6 +82,7 @@ class VersionSolver:
             next = self._root.name
             while next is not None:
                 self._propagate(next)
+                self._prefetcher.prefetch()
                 next = self._choose_package_version()
 
             return self._result()
@@ -92,6 +95,8 @@ class VersionSolver:
                     time.time() - start, self._solution.attempted_solutions
                 )
             )
+
+            self._prefetcher.shutdown()
 
     def _propagate(self, package: str) -> None:
         """
@@ -366,33 +371,37 @@ class VersionSolver:
         else:
             dependency = min(*unsatisfied, key=_get_min)
 
-        locked = self._get_locked(dependency)
-        if locked is None or not dependency.constraint.allows(locked.version):
-            try:
-                packages = self._provider.search_for(dependency)
-            except ValueError as e:
-                self._add_incompatibility(
-                    Incompatibility([Term(dependency, True)], PackageNotFoundCause(e))
-                )
-                return dependency.complete_name
-
-            try:
-                version = packages[0]
-            except IndexError:
-                version = None
-
-            if version is None:
-                # If there are no versions that satisfy the constraint,
-                # add an incompatibility that indicates that.
-                self._add_incompatibility(
-                    Incompatibility([Term(dependency, True)], NoVersionsCause())
-                )
-
-                return dependency.complete_name
+        prefetched_completed_package = self._prefetcher.prefetched(dependency)
+        if prefetched_completed_package:
+            version = prefetched_completed_package
         else:
-            version = locked
+            locked = self._get_locked(dependency)
+            if locked is None or not dependency.constraint.allows(locked.version):
+                try:
+                    packages = self._provider.search_for(dependency)
+                except ValueError as e:
+                    self._add_incompatibility(
+                        Incompatibility([Term(dependency, True)], PackageNotFoundCause(e))
+                    )
+                    return dependency.complete_name
 
-        version = self._provider.complete_package(version)
+                try:
+                    version = packages[0]
+                except IndexError:
+                    version = None
+
+                if version is None:
+                    # If there are no versions that satisfy the constraint,
+                    # add an incompatibility that indicates that.
+                    self._add_incompatibility(
+                        Incompatibility([Term(dependency, True)], NoVersionsCause())
+                    )
+
+                    return dependency.complete_name
+            else:
+                version = locked
+
+            version = self._provider.complete_package(version)
 
         conflict = False
         for incompatibility in self._provider.incompatibilities_for(version, self._forced_versions):
