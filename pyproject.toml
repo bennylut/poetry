@@ -32,12 +32,15 @@ classifiers = [
 [tool.poetry.build]
 generate-setup-file = false
 
+[tool.relaxed-poetry.properties]
+relaxed-poetry-core-dep = "^0.0.7"
+
 # Requirements
 
 [tool.poetry.dependencies]
 python = "^3.6"
 
-relaxed-poetry-core = "^0.0.6"
+relaxed-poetry-core = "$relaxed-poetry-core-dep"
 cleo = "^1.0.0a4"
 crashtest = "^0.3.0"
 requests = "^2.18"
@@ -57,6 +60,7 @@ entrypoints = "^0.3"
 importlib-metadata = {version = "^1.6.0", python = "<3.8"}
 dataclasses = {version = "^0.8", python = "~3.6"}
 
+
 [tool.poetry.dev-dependencies]
 pytest = "^6.2"
 pytest-cov = "^2.8"
@@ -73,7 +77,7 @@ poetry = "poetry.console.application:main"
 
 
 [build-system]
-requires = ["relaxed-poetry-core>=0.0.6"]
+requires = ["relaxed-poetry-core>=0.0.7"]
 build-backend = "poetry.core.masonry.api"
 
 

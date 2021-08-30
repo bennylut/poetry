@@ -34,7 +34,9 @@ class VersionPrefetcher:
                 try:
                     packages = vsolver._provider.search_for(dependency)
                     version = packages[0]
-                except ValueError as e:
+                except ValueError:
+                    pass
+                except IndexError:
                     pass
 
             result = vsolver._provider.complete_package(version)
