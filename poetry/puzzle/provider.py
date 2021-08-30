@@ -1,6 +1,7 @@
 import logging
 import os
 import re
+import threading
 import time
 import urllib.parse
 
@@ -71,11 +72,20 @@ class Provider:
         self._python_constraint = package.python_constraint
         self._installed_python_constraint = _installed_python_version_constraint(env) if env else None
         self._search_for = {}
+        self._search_for_sem = threading.Semaphore(1)
         self._is_debugging = self._io.is_debug() or self._io.is_very_verbose()
         self._in_progress = False
         self._overrides = {}
         self._deferred_cache = {}
         self._load_deferred = True
+
+    @contextmanager
+    def __search_for_locked(self):
+        self._search_for_sem.acquire()
+        try:
+            yield
+        finally:
+            self._search_for_sem.release()
 
     @property
     def pool(self) -> Pool:
@@ -125,7 +135,10 @@ class Provider:
         if dependency.is_root:
             return PackageCollection(dependency, [self._package])
 
-        for constraint in self._search_for:
+        with self.__search_for_locked():
+            search_for = self._search_for.copy()
+
+        for constraint in search_for:
             if (
                 constraint.is_same_package_as(dependency)
                 and constraint.constraint.intersect(dependency.constraint)
@@ -133,7 +146,7 @@ class Provider:
             ):
                 packages = [
                     p
-                    for p in self._search_for[constraint]
+                    for p in search_for[constraint]
                     if dependency.constraint.allows(p.version)
                 ]
 
@@ -166,7 +179,8 @@ class Provider:
                 reverse=True,
             )
 
-        self._search_for[dependency] = packages
+        with self.__search_for_locked():
+            self._search_for[dependency] = packages
 
         return PackageCollection(dependency, packages)
 
