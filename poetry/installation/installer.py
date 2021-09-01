@@ -6,6 +6,7 @@ from typing import Union
 
 from cleo.io.io import IO
 from cleo.io.null_io import NullIO
+from poetry.core.packages.package import Package
 
 from poetry.config.config import Config
 from poetry.core.packages.project_package import ProjectPackage
@@ -23,7 +24,7 @@ from .operations import Uninstall
 from .operations import Update
 from .operations.operation import Operation
 from .pip_installer import PipInstaller
-
+from ..console import console
 
 if TYPE_CHECKING:
     from poetry.utils.env import Env
@@ -33,15 +34,15 @@ if TYPE_CHECKING:
 
 class Installer:
     def __init__(
-        self,
-        io: IO,
-        env: "Env",
-        package: ProjectPackage,
-        locker: Locker,
-        pool: Pool,
-        config: Config,
-        installed: Union[Repository, None] = None,
-        executor: Optional[Executor] = None,
+            self,
+            io: IO,
+            env: "Env",
+            package: ProjectPackage,
+            locker: Locker,
+            pool: Pool,
+            config: Config,
+            installed: Union[Repository, None] = None,
+            executor: Optional[Executor] = None,
     ):
         self._io = io
         self._env = env
@@ -123,7 +124,7 @@ class Installer:
         return self._dry_run
 
     def requires_synchronization(
-        self, requires_synchronization: bool = True
+            self, requires_synchronization: bool = True
     ) -> "Installer":
         self._requires_synchronization = requires_synchronization
 
@@ -217,7 +218,7 @@ class Installer:
         local_repo = Repository()
         self._populate_local_repo(local_repo, ops)
 
-        self._write_lock_file(local_repo, force=True)
+        self._write_lock_file(local_repo.packages, force=True)
 
         return 0
 
@@ -277,12 +278,10 @@ class Installer:
 
         self._populate_local_repo(local_repo, ops)
 
-        if self._update:
-            self._write_lock_file(local_repo)
-
-            if self._lock:
-                # If we are only in lock mode, no need to go any further
-                return 0
+        if self._update and self._lock:
+            # If we are only in lock mode, no need to go any further
+            self._write_lock_file(local_repo.packages)
+            return 0
 
         if self._without_groups or self._with_groups or self._only_groups:
             if self._with_groups:
@@ -306,7 +305,7 @@ class Installer:
             )
 
         # We resolve again by only using the lock file
-        pool = Pool(ignore_repository_names=True)
+        pool = Pool(ignore_repository_names=True, parent=self._pool)
 
         # Making a new repo containing the packages
         # newly resolved and the ones from the current lock file
@@ -330,6 +329,17 @@ class Installer:
                 synchronize=self._requires_synchronization,
             )
 
+        # When the user receives a lockfile by their cvs and it does not contains some of the dependencies
+        # that was recently added, the lockfile dont have the information about those dependencies
+        # and therefore it should be updated
+        out_of_lock_file_ops = [
+            op for op in ops
+            if isinstance(op, Install) and not locked_repository.has_package(op.package)]
+
+        if len(out_of_lock_file_ops) > 0:
+            self._populate_local_repo(local_repo, out_of_lock_file_ops)
+            # self._write_lock_file(local_repo, force=True)
+
         if not self._requires_synchronization:
             # If no packages synchronisation has been requested we need
             # to calculate the uninstall operations
@@ -343,22 +353,30 @@ class Installer:
             )
 
             ops = [
-                op
-                for op in transaction.calculate_operations(with_uninstalls=True)
-                if op.job_type == "uninstall"
-            ] + ops
+                      op
+                      for op in transaction.calculate_operations(with_uninstalls=True)
+                      if op.job_type == "uninstall"
+                  ] + ops
+
 
         # We need to filter operations so that packages
         # not compatible with the current system,
         # or optional and not requested, are dropped
         self._filter_operations(ops, local_repo)
 
+        # update the lock if there was a version changes in the local repository
+        for op in ops:
+            if isinstance(op, Uninstall) or not locked_repository.has_package(op.package):
+                # console.println(f"Writing lock file because {op.package} is not in the lock")
+                self._write_lock_file([op.package for op in ops if not isinstance(op, Uninstall)], force=True)
+                break
+
         # Execute operations
         return self._execute(ops)
 
-    def _write_lock_file(self, repo: Repository, force: bool = True) -> None:
+    def _write_lock_file(self, packages: List[Package], force: bool = True) -> None:
         if force or (self._update and self._write_lock):
-            updated_lock = self._locker.set_lock_data(self._package, repo.packages)
+            updated_lock = self._locker.set_lock_data(self._package, packages)
 
             if updated_lock:
                 self._io.write_line("")
@@ -501,7 +519,7 @@ class Installer:
         self._installer.remove(operation.package)
 
     def _populate_local_repo(
-        self, local_repo: Repository, ops: List[Operation]
+            self, local_repo: Repository, ops: List[Operation]
     ) -> None:
         for op in ops:
             if isinstance(op, Uninstall):
@@ -515,7 +533,7 @@ class Installer:
                 local_repo.add_package(package)
 
     def _get_operations_from_lock(
-        self, locked_repository: Repository
+            self, locked_repository: Repository
     ) -> List[Operation]:
         installed_repo = self._installed_repository
         ops = []

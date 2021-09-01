@@ -39,12 +39,17 @@ class VersionPrefetcher:
                 except IndexError:
                     pass
 
-            result = vsolver._provider.complete_package(version)
-            self._prefetched[str(version.dependency)] = _FakeFuture(result)
-            return result
+            if version:
+                result = vsolver._provider.complete_package(version)
+                self._prefetched[str(version.dependency)] = _FakeFuture(result)
+                return result
+
+            return None
 
         for dependency in pending:
-            self._prefetched[str(dependency)] = self._executor.submit(fetch, dependency)
+            version = self._executor.submit(fetch, dependency)
+            if version:
+                self._prefetched[str(dependency)] = version
 
 
 class _FakeFuture:

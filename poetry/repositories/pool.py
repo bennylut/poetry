@@ -18,6 +18,7 @@ class Pool(BaseRepository):
         self,
         repositories: Optional[List[Repository]] = None,
         ignore_repository_names: bool = False,
+        parent: Optional["Pool"] = None,
     ) -> None:
         if repositories is None:
             repositories = []
@@ -27,6 +28,7 @@ class Pool(BaseRepository):
         self._default = False
         self._has_primary_repositories = False
         self._secondary_start_idx = None
+        self._parent = parent
 
         for repository in repositories:
             self.add_repository(repository)
@@ -130,6 +132,8 @@ class Pool(BaseRepository):
             and repository not in self._lookup
             and not self._ignore_repository_names
         ):
+            if self._parent:
+                return self._parent.package(name, version, extras, repository)
             raise ValueError(f'Repository "{repository}" does not exist.')
 
         if repository is not None and not self._ignore_repository_names:
@@ -149,6 +153,8 @@ class Pool(BaseRepository):
 
                     return package
 
+        if self._parent:
+            return self._parent.package(name, version, extras, repository)
         raise PackageNotFound(f"Package {name} ({version}) not found.")
 
     def find_packages(self, dependency: "Dependency") -> List["Package"]:
@@ -161,6 +167,8 @@ class Pool(BaseRepository):
             and repository not in self._lookup
             and not self._ignore_repository_names
         ):
+            if self._parent:
+                return self._parent.find_packages(dependency)
             raise ValueError(f'Repository "{repository}" does not exist.')
 
         if repository is not None and not self._ignore_repository_names:
@@ -168,12 +176,17 @@ class Pool(BaseRepository):
 
         packages = []
         for repo in self._repositories[:self._secondary_start_idx]:
-            packages += repo.find_packages(dependency)
+            found_packages = repo.find_packages(dependency)
+            if len(found_packages) > 0:
+                packages += found_packages
+                break
+
+        if len(packages) == 0 and self._parent is not None:
+            return self._parent.find_packages(dependency)
 
         return packages
 
     def search(self, query: str) -> List["Package"]:
-        print("HERE: Enter method search which will scan all repositories")
         from .legacy_repository import LegacyRepository
 
         results = []
@@ -183,4 +196,4 @@ class Pool(BaseRepository):
 
             results += repository.search(query)
 
-        return results
+        return results + (self._parent.search(query) if self._parent else [])
