@@ -1,8 +1,11 @@
+import shutil
 from functools import cmp_to_key
 from importlib.util import find_spec
 from pathlib import Path
 from typing import List, Optional
 import sys
+import os
+import site
 
 from poetry.core.packages.package import Package
 
@@ -38,6 +41,27 @@ class RpInstallation:
     def data_dir(self) -> Path:
         from poetry.locations import data_dir
         return data_dir()
+
+    @cached_property
+    def bin_dir(self) -> Path:
+        if self._data_dir is not None:
+            return self._data_dir
+
+        from poetry.utils._compat import WINDOWS
+
+        if os.getenv("RP_HOME"):
+            return Path(os.getenv("RP_HOME"), "bin").expanduser()
+
+        user_base = site.getuserbase()
+
+        if WINDOWS:
+            bin_dir = os.path.join(user_base, "Scripts")
+        else:
+            bin_dir = os.path.join(user_base, "bin")
+
+        self._bin_dir = Path(bin_dir)
+
+        return self._bin_dir
 
     @cached_property
     def _installed_repository(self) -> InstalledRepository:
@@ -93,14 +117,41 @@ class RpInstallation:
         console.println(f"Updating <c1>Relaxed-Poetry</c1> to <c2>{release.version}</c2>")
         console.println()
 
-        release.version
-
-        self.update(release)
+        self.add_packages(f"relaxed-poetry {release}")
+        self._make_bin()
 
         console.println(f"<c1>Relaxed-Poetry</c1> (<c2>{release.version}</c2>) is installed now. Great!")
         console.println()
 
         return True
+
+    def _make_bin(self) -> None:
+        from poetry.utils._compat import WINDOWS
+
+        console.println("")
+        console.println("Updating the <c1>rp</c1> script")
+
+        self.bin_dir.mkdir(parents=True, exist_ok=True)
+
+        script = "rp"
+        target_script = "venv/bin/poetry"
+        if WINDOWS:
+            script = "rp.exe"
+            target_script = "venv/Scripts/poetry.exe"
+
+        if self.bin_dir.joinpath(script).exists():
+            self.bin_dir.joinpath(script).unlink()
+
+        try:
+            self.bin_dir.joinpath(script).symlink_to(
+                self.data_dir.joinpath(target_script)
+            )
+        except OSError:
+            # This can happen if the user
+            # does not have the correct permission on Windows
+            shutil.copy(
+                self.data_dir.joinpath(target_script), self.bin_dir.joinpath(script)
+            )
 
     def add_packages(self, *packages: str, dry_run: bool = False):
         from poetry.config.config import Config
@@ -133,7 +184,18 @@ class RpInstallation:
         installer.run()
 
     def has_package(self, package: str, constraint: str = "*") -> bool:
-        ir : InstalledRepository = self._installed_repository
+        ir: InstalledRepository = self._installed_repository
         return len(ir.find_packages(Dependency(package, constraint))) > 0
 
+    def resources(self):
+        try:
+            import importlib.resources as pkg_resources
+        except ImportError:
+            # Try backported to PY<37 `importlib_resources`.
+            import importlib_resources as pkg_resources
+
+        import poetry.resources as resources
+        print(pkg_resources.files(resources))
+
 installation = RpInstallation()
+

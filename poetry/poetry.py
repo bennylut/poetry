@@ -2,7 +2,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 from typing import List
 
-from poetry.core.pyproject.toml import PyProjectTOML
+from poetry.core.pyproject.toml import PyProject
 
 from poetry.__version__ import __version__
 from poetry.config.source import Source
@@ -25,7 +25,7 @@ class Poetry(BasePoetry):
     def __init__(
         self,
         file: Path,
-        pyproject: PyProjectTOML,
+        pyproject: PyProject,
         package: "ProjectPackage",
         locker: "Locker",
         config: "Config",

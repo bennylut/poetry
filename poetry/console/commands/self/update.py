@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 from cleo.helpers import argument
 from cleo.helpers import option
 
+
 from ..command import Command
 
 
@@ -31,6 +32,8 @@ class SelfUpdateCommand(Command):
             "Output the operations but do not execute anything "
             "(implicitly enables --verbose).",
         ),
+
+        option("new")
     ]
 
     _data_dir = None
@@ -83,6 +86,13 @@ class SelfUpdateCommand(Command):
         return pool
 
     def handle(self) -> int:
+
+        if self.option("new"):
+            from poetry.rp_installation import installation
+            installation.update(self.option("dry-run"))
+            return 0
+
+
         from poetry.__version__ import __version__
         from poetry.core.packages.dependency import Dependency
         from poetry.core.semver.version import Version

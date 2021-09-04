@@ -62,7 +62,7 @@ You can specify a package in the following forms:
         from cleo.io.inputs.string_input import StringInput
         from cleo.io.io import IO
 
-        from poetry.core.pyproject.toml import PyProjectTOML
+        from poetry.core.pyproject.toml import PyProject
         from poetry.core.semver.helpers import parse_constraint
         from poetry.factory import Factory
         from poetry.packages.project_package import ProjectPackage
@@ -126,7 +126,7 @@ You can specify a package in the following forms:
 
         # We add the plugins to the dependencies section of the previously
         # created `pyproject.toml` file
-        pyproject = PyProjectTOML(env_dir.joinpath("pyproject.toml"))
+        pyproject = PyProject.read(env_dir.joinpath("pyproject.toml"), None)
         poetry_content = pyproject.poetry_config
         poetry_dependency_section = poetry_content["dependencies"]
         plugin_names = []

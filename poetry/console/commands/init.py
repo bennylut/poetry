@@ -13,6 +13,7 @@ from typing import Union
 
 from cleo.helpers import option
 from tomlkit import inline_table
+from tomlkit.toml_document import TOMLDocument
 
 from .command import Command
 from .env_command import EnvCommand
@@ -64,14 +65,16 @@ The <c1>init</c1> command creates a basic <comment>pyproject.toml</> file in the
     def handle(self) -> int:
         from pathlib import Path
 
-        from poetry.core.pyproject.toml import PyProjectTOML
+        from poetry.core.pyproject.toml import PyProject
         from poetry.core.vcs.git import GitConfig
         from poetry.layouts import layout
         from poetry.utils.env import SystemEnv
 
-        pyproject = PyProjectTOML(Path.cwd() / "pyproject.toml")
+        pyproject_file = Path.cwd() / "pyproject.toml"
+        # pyproject = PyProjectTOML(Path.cwd() / "pyproject.toml")
 
-        if pyproject.file.exists():
+        if pyproject_file.exists():
+            pyproject = PyProject.read(pyproject_file, None)
             if pyproject.is_poetry_project():
                 self.line(
                     "<error>A pyproject.toml file with a poetry section already exists.</error>"
@@ -83,6 +86,8 @@ The <c1>init</c1> command creates a basic <comment>pyproject.toml</> file in the
                     "<error>A pyproject.toml file with a defined build-system already exists.</error>"
                 )
                 return 1
+        else:
+            pyproject = PyProject(pyproject_file, TOMLDocument(), None)
 
         vcs_config = GitConfig()
 

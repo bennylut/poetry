@@ -17,7 +17,7 @@ from poetry.core.factory import Factory
 from poetry.core.packages.dependency import Dependency
 from poetry.core.packages.package import Package
 from poetry.core.packages.project_package import ProjectPackage
-from poetry.core.pyproject.toml import PyProjectTOML
+from poetry.core.pyproject.toml import PyProject
 from poetry.core.utils.helpers import parse_requires
 from poetry.core.utils.helpers import temporary_directory
 from poetry.core.version.markers import InvalidMarker
@@ -439,7 +439,7 @@ class PackageInfo:
     def _get_poetry_package(path: Path) -> Optional[ProjectPackage]:
         # Note: we ignore any setup.py file at this step
         # TODO: add support for handling non-poetry PEP-517 builds
-        if PyProjectTOML(path.joinpath("pyproject.toml")).is_poetry_project():
+        if PyProject.has_poetry_section(path.joinpath("pyproject.toml")):
             return Factory().create_poetry(path).package
 
     @classmethod

@@ -18,7 +18,7 @@ from cleo.io.null_io import NullIO
 
 from poetry.core.packages.file_dependency import FileDependency
 from poetry.core.packages.utils.link import Link
-from poetry.core.pyproject.toml import PyProjectTOML
+from poetry.core.pyproject.toml import PyProject
 from poetry.utils._compat import decode
 from poetry.utils.env import EnvCommandError
 from poetry.utils.helpers import safe_rmtree
@@ -563,7 +563,7 @@ class Executor:
         else:
             req = Path(package.source_url).resolve(strict=False)
 
-        pyproject = PyProjectTOML(os.path.join(req, "pyproject.toml"))
+        pyproject = PyProject.read(os.path.join(req, "pyproject.toml"), None)
 
         if pyproject.is_poetry_project():
             # Even if there is a build system specified

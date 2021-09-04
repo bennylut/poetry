@@ -15,7 +15,7 @@ from poetry.utils.helpers import module_name
 if TYPE_CHECKING:
     from tomlkit.items import InlineTable
 
-    from poetry.core.pyproject.toml import PyProjectTOML
+    from poetry.core.pyproject.toml import PyProject
 
 
 POETRY_DEFAULT = """\
@@ -114,7 +114,7 @@ class Layout:
         self._write_poetry(path)
 
     def generate_poetry_content(
-        self, original: Optional["PyProjectTOML"] = None
+        self, original: Optional["PyProject"] = None
     ) -> str:
         template = POETRY_DEFAULT
 
