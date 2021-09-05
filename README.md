@@ -12,6 +12,7 @@ All of the changes that were made in this fork are documented in the wiki, the f
 - Forced dependency versions 
 - Relaxation of version-enforcements
 - Faster dependency-versions resolution (~4 times faster on tested projects)
+- Multi-package projects support  
 - `virtualenvs.in-project` is true by default
 - new configuration: `virtualenvs.symlinks-on-path-deps` similar to `flit install --symlink`
 - property definition and substitution in pyproject 
