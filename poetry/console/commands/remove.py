@@ -6,6 +6,7 @@ from cleo.helpers import argument
 from cleo.helpers import option
 
 from .installer_command import InstallerCommand
+from .. import console
 
 
 class RemoveCommand(InstallerCommand):
@@ -33,6 +34,10 @@ list of installed packages
     loggers = ["poetry.repositories.pypi_repository", "poetry.inspection.info"]
 
     def handle(self) -> int:
+        if self.poetry.pyproject.is_parent():
+            console.println("This command is not applicable for parent projects")
+            return 1
+
         packages = self.argument("packages")
 
         if self.option("dev"):

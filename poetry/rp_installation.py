@@ -1,9 +1,7 @@
 import shutil
 from functools import cmp_to_key
-from importlib.util import find_spec
 from pathlib import Path
-from typing import List, Optional
-import sys
+from typing import  Optional
 import os
 import site
 
@@ -18,7 +16,7 @@ from poetry.console.exceptions import PoetrySimpleConsoleException
 from poetry.repositories.installed_repository import InstalledRepository
 from poetry.repositories.pool import Pool
 from poetry.repositories.pypi_repository import PyPiRepository
-from poetry.utils.props_ext import cached_property
+from poetry.core.packages.utils.props_ext import cached_property
 
 
 class RpInstallation:

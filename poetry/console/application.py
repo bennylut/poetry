@@ -23,6 +23,7 @@ from cleo.io.outputs.output import Output
 from poetry.core.pyproject.profiles import ProfilesActivationData
 
 from poetry.__version__ import __version__
+from poetry.console import console
 
 from .command_loader import CommandLoader
 from .commands.command import Command
@@ -102,7 +103,7 @@ class Application(BaseApplication):
 
         self._poetry = None
         self._io: Optional[IO] = None
-        self._disable_plugins = False
+        self.disable_plugins = False
         self._plugins_loaded = False
 
         dispatcher = EventDispatcher()
@@ -132,7 +133,7 @@ class Application(BaseApplication):
         profile_activation = ProfilesActivationData(manual_profiles, self._running_command.name)
 
         self._poetry = Factory().create_poetry(
-            Path.cwd(), io=self._io, disable_plugins=self._disable_plugins, profiles=profile_activation
+            Path.cwd(), io=self._io, disable_plugins=self.disable_plugins, profiles=profile_activation
         )
 
         return self._poetry
@@ -145,31 +146,13 @@ class Application(BaseApplication):
         self._poetry = None
 
     def create_io(
-        self,
-        input: Optional[Input] = None,
-        output: Optional[Output] = None,
-        error_output: Optional[Output] = None,
+            self,
+            input: Optional[Input] = None,
+            output: Optional[Output] = None,
+            error_output: Optional[Output] = None,
     ) -> IO:
         io = super().create_io(input, output, error_output)
-
-        # Set our own CLI styles
-        formatter = io.output.formatter
-        formatter.set_style("c1", Style("cyan"))
-        formatter.set_style("c2", Style("default", options=["bold"]))
-        formatter.set_style("info", Style("blue"))
-        formatter.set_style("comment", Style("green"))
-        formatter.set_style("warning", Style("yellow"))
-        formatter.set_style("debug", Style("default", options=["dark"]))
-        formatter.set_style("success", Style("green"))
-
-        # Dark variants
-        formatter.set_style("c1_dark", Style("cyan", options=["dark"]))
-        formatter.set_style("c2_dark", Style("default", options=["bold", "dark"]))
-        formatter.set_style("success_dark", Style("green", options=["dark"]))
-
-        io.output.set_formatter(formatter)
-        io.error_output.set_formatter(formatter)
-
+        console.set_io(io)
         self._io = io
 
         return io
@@ -182,7 +165,7 @@ class Application(BaseApplication):
         super().render_error(error, io)
 
     def _run(self, io: IO) -> int:
-        self._disable_plugins = io.input.parameter_option("--no-plugins")
+        self.disable_plugins = io.input.parameter_option("--no-plugins")
 
         self._load_plugins(io)
 
@@ -229,7 +212,7 @@ class Application(BaseApplication):
         return super()._configure_io(io)
 
     def register_command_loggers(
-        self, event: ConsoleCommandEvent, event_name: str, _: Any
+            self, event: ConsoleCommandEvent, event_name: str, _: Any
     ) -> None:
         from .logging.io_formatter import IOFormatter
         from .logging.io_handler import IOHandler
@@ -270,7 +253,7 @@ class Application(BaseApplication):
             logger.setLevel(level)
 
     def configure_env(
-        self, event: ConsoleCommandEvent, event_name: str, _: Any
+            self, event: ConsoleCommandEvent, event_name: str, _: Any
     ) -> None:
         from .commands.env_command import EnvCommand
 
@@ -281,26 +264,22 @@ class Application(BaseApplication):
         if command.env is not None:
             return
 
-        from poetry.utils.env import EnvManager
-
-        io = event.io
         poetry = command.poetry
 
-        env_manager = EnvManager(poetry)
-        env = env_manager.create_venv(io)
-
-        if env.is_venv() and io.is_verbose():
-            io.write_line(f"Using virtualenv: <comment>{env.path}</>")
-
-        command.set_env(env)
+        command.set_env(poetry.env)
 
     def configure_installer(
-        self, event: ConsoleCommandEvent, event_name: str, _: Any
+            self, event: ConsoleCommandEvent, event_name: str, _: Any
     ) -> None:
+
         from .commands.installer_command import InstallerCommand
 
         command: InstallerCommand = cast(InstallerCommand, event.command)
         if not isinstance(command, InstallerCommand):
+            return
+
+        # No Environment for parent projects = no installers
+        if command.poetry.pyproject.is_parent():
             return
 
         # If the command already has an installer
@@ -308,30 +287,15 @@ class Application(BaseApplication):
         if command.installer is not None:
             return
 
-        self._configure_installer(command, event.io)
-
-    def _configure_installer(self, command: "InstallerCommand", io: "IO") -> None:
-        from poetry.installation.installer import Installer
-
-        poetry = command.poetry
-        installer = Installer(
-            io,
-            command.env,
-            poetry.package,
-            poetry.locker,
-            poetry.pool,
-            poetry.config,
-        )
-        installer.use_executor(poetry.config.get("experimental.new-installer", False))
-        command.set_installer(installer)
+        command.set_installer(command.poetry.installer)
 
     def _load_plugins(self, io: IO) -> None:
         if self._plugins_loaded:
             return
 
-        self._disable_plugins = io.input.has_parameter_option("--no-plugins")
+        self.disable_plugins = io.input.has_parameter_option("--no-plugins")
 
-        if not self._disable_plugins:
+        if not self.disable_plugins:
             from poetry.plugins.plugin_manager import PluginManager
 
             manager = PluginManager("application.plugin")

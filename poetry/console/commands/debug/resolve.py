@@ -6,7 +6,7 @@ from cleo.helpers import option
 from cleo.io.outputs.output import Verbosity
 
 from ..init import InitCommand
-
+from ... import console
 
 if TYPE_CHECKING:
     from poetry.console.commands.show import ShowCommand
@@ -36,6 +36,10 @@ class DebugResolveCommand(InitCommand):
     loggers = ["poetry.repositories.pypi_repository", "poetry.inspection.info"]
 
     def handle(self) -> Optional[int]:
+        if self.poetry.pyproject.is_parent():
+            console.println("This command is not applicable for parent projects")
+            return 1
+
         from cleo.io.null_io import NullIO
 
         from poetry.core.packages.project_package import ProjectPackage

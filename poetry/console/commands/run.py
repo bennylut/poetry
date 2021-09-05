@@ -5,7 +5,7 @@ from typing import Union
 from cleo.helpers import argument
 
 from .env_command import EnvCommand
-
+from .. import console
 
 if TYPE_CHECKING:
     from poetry.core.masonry.utils.module import Module
@@ -21,6 +21,10 @@ class RunCommand(EnvCommand):
     ]
 
     def handle(self) -> Any:
+        if self.poetry.pyproject.is_parent():
+            console.println("This command is not applicable for parent projects")
+            return 1
+
         args = self.argument("args")
         script = args[0]
         scripts = self.poetry.local_config.get("scripts")

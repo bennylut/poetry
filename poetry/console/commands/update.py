@@ -2,6 +2,7 @@ from cleo.helpers import argument
 from cleo.helpers import option
 
 from .installer_command import InstallerCommand
+from .. import console
 
 
 class UpdateCommand(InstallerCommand):
@@ -30,20 +31,24 @@ class UpdateCommand(InstallerCommand):
     def handle(self) -> int:
         packages = self.argument("packages")
 
-        self._installer.use_executor(
-            self.poetry.config.get("experimental.new-installer", False)
-        )
+        for poetry in self.poetry.all_sub_poetries():
 
-        if packages:
-            self._installer.whitelist({name: "*" for name in packages})
+            console.println(f"Updating project: <c1>{poetry.pyproject.name}</c1>")
 
-        if self.option("no-dev"):
-            self._installer.with_groups(["dev"])
+            if packages:
+                poetry.installer.whitelist({name: "*" for name in packages})
 
-        self._installer.dry_run(self.option("dry-run"))
-        self._installer.execute_operations(not self.option("lock"))
+            if self.option("no-dev"):
+                poetry.installer.with_groups(["dev"])
 
-        # Force update
-        self._installer.update(True)
+            poetry.installer.dry_run(self.option("dry-run"))
+            poetry.installer.execute_operations(not self.option("lock"))
 
-        return self._installer.run()
+            # Force update
+            poetry.installer.update(True)
+
+            exit_code = poetry.installer.run()
+            if exit_code != 0:
+                return exit_code
+
+        return 0

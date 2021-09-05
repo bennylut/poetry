@@ -1,6 +1,7 @@
 from cleo.helpers import option
 
 from ..command import Command
+from ... import console
 
 
 class EnvListCommand(Command):
@@ -10,7 +11,11 @@ class EnvListCommand(Command):
 
     options = [option("full-path", None, "Output the full paths of the virtualenvs.")]
 
-    def handle(self) -> None:
+    def handle(self) -> int:
+        if self.poetry.pyproject.is_parent():
+            console.println("This command is not applicable for parent projects")
+            return 1
+
         from poetry.utils.env import EnvManager
 
         manager = EnvManager(self.poetry)
@@ -27,3 +32,5 @@ class EnvListCommand(Command):
                 continue
 
             self.line(name)
+
+        return 0

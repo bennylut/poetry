@@ -4,7 +4,7 @@ from typing import Optional
 from cleo.helpers import option
 
 from ..command import Command
-
+from ... import console
 
 if TYPE_CHECKING:
     from poetry.utils.env import Env
@@ -18,6 +18,10 @@ class EnvInfoCommand(Command):
     options = [option("path", "p", "Only display the environment's path.")]
 
     def handle(self) -> Optional[int]:
+        if self.poetry.pyproject.is_parent():
+            console.println(f"No virtual environments can be managed for parent projects.")
+            return 1
+
         from poetry.utils.env import EnvManager
 
         env = EnvManager(self.poetry).get()

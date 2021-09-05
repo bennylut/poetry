@@ -89,9 +89,6 @@ dependencies and not including the current project, run the command with the
         from poetry.core.masonry.utils.module import ModuleOrPackageNotFound
         from poetry.masonry.builders import EditableBuilder
 
-        self._installer.use_executor(
-            self.poetry.config.get("experimental.new-installer", False)
-        )
 
         extras = []
         for extra in self.option("extras"):
@@ -99,8 +96,6 @@ dependencies and not including the current project, run the command with the
                 extras += [e.strip() for e in extra.split(" ")]
             else:
                 extras.append(extra)
-
-        self._installer.extras(extras)
 
         excluded_groups = []
         included_groups = []
@@ -152,55 +147,58 @@ dependencies and not including the current project, run the command with the
 
             with_synchronization = True
 
-        self._installer.only_groups(only_groups)
-        self._installer.without_groups(excluded_groups)
-        self._installer.with_groups(included_groups)
-        self._installer.dry_run(self.option("dry-run"))
-        self._installer.requires_synchronization(with_synchronization)
-        self._installer.verbose(self._io.is_verbose())
+        for poetry in self.poetry.all_sub_poetries():
+            installer = poetry.installer
+            installer.extras(extras)
+            installer.only_groups(only_groups)
+            installer.without_groups(excluded_groups)
+            installer.with_groups(included_groups)
+            installer.dry_run(self.option("dry-run"))
+            installer.requires_synchronization(with_synchronization)
+            installer.verbose(self._io.is_verbose())
 
-        return_code = self._installer.run()
+            return_code = installer.run()
 
-        if return_code != 0:
-            return return_code
+            if return_code != 0:
+                return return_code
 
-        if self.option("no-root") or self.option("only"):
-            return 0
+            if self.option("no-root") or self.option("only"):
+                continue
 
-        try:
-            builder = EditableBuilder(self.poetry, self._env, self._io)
-        except ModuleOrPackageNotFound:
-            # This is likely due to the fact that the project is an application
-            # not following the structure expected by Poetry
-            # If this is a true error it will be picked up later by build anyway.
-            return 0
+            try:
+                builder = EditableBuilder(poetry, poetry.env, self._io)
+            except ModuleOrPackageNotFound:
+                # This is likely due to the fact that the project is an application
+                # not following the structure expected by Poetry
+                # If this is a true error it will be picked up later by build anyway.
+                continue
 
-        self.line("")
-        if not self._io.output.is_decorated() or self.io.is_debug():
-            self.line(
-                "<b>Installing</> the current project: <c1>{}</c1> (<c2>{}</c2>)".format(
-                    self.poetry.package.pretty_name, self.poetry.package.pretty_version
-                )
-            )
-        else:
-            self.write(
-                "<b>Installing</> the current project: <c1>{}</c1> (<c2>{}</c2>)".format(
-                    self.poetry.package.pretty_name, self.poetry.package.pretty_version
-                )
-            )
-
-        if self.option("dry-run"):
             self.line("")
-            return 0
-
-        builder.build()
-
-        if self._io.output.is_decorated() and not self.io.is_debug():
-            self.overwrite(
-                "<b>Installing</> the current project: <c1>{}</c1> (<success>{}</success>)".format(
-                    self.poetry.package.pretty_name, self.poetry.package.pretty_version
+            if not self._io.output.is_decorated() or self.io.is_debug():
+                self.line(
+                    "<b>Installing</> project: <c1>{}</c1> (<c2>{}</c2>)".format(
+                        poetry.package.pretty_name, poetry.package.pretty_version
+                    )
                 )
-            )
-            self.line("")
+            else:
+                self.write(
+                    "<b>Installing</> project: <c1>{}</c1> (<c2>{}</c2>)".format(
+                        poetry.package.pretty_name, poetry.package.pretty_version
+                    )
+                )
+
+            if self.option("dry-run"):
+                self.line("")
+                continue
+
+            builder.build()
+
+            if self._io.output.is_decorated() and not self.io.is_debug():
+                self.overwrite(
+                    "<b>Installing</> project: <c1>{}</c1> (<success>{}</success>)".format(
+                        poetry.package.pretty_name, poetry.package.pretty_version
+                    )
+                )
+                self.line("")
 
         return 0

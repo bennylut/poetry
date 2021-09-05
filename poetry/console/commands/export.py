@@ -3,6 +3,7 @@ from cleo.helpers import option
 from poetry.utils.exporter import Exporter
 
 from .command import Command
+from .. import console
 
 
 class ExportCommand(Command):
@@ -31,7 +32,12 @@ class ExportCommand(Command):
         option("with-credentials", None, "Include credentials for extra indices."),
     ]
 
-    def handle(self) -> None:
+    def handle(self) -> int:
+
+        if self.poetry.pyproject.is_parent():
+            console.println("This command is not applicable for parent projects")
+            return 1
+
         fmt = self.option("format")
 
         if fmt not in Exporter.ACCEPTED_FORMATS:
@@ -72,3 +78,5 @@ class ExportCommand(Command):
             extras=self.option("extras"),
             with_credentials=self.option("with-credentials"),
         )
+
+        return 0

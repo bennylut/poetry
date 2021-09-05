@@ -16,8 +16,11 @@ class Console:
                 StreamOutput(sys.stdout),
                 StreamOutput(sys.stderr))
 
+        self.set_io(io)
+
+    def set_io(self, new_io: IO):
         # Set our own CLI styles
-        formatter = io.output.formatter
+        formatter = new_io.output.formatter
         formatter.set_style("c1", Style("cyan"))
         formatter.set_style("c2", Style("default", options=["bold"]))
         formatter.set_style("info", Style("blue"))
@@ -31,15 +34,23 @@ class Console:
         formatter.set_style("c2_dark", Style("default", options=["bold", "dark"]))
         formatter.set_style("success_dark", Style("green", options=["dark"]))
 
-        io.output.set_formatter(formatter)
-        io.error_output.set_formatter(formatter)
+        new_io.output.set_formatter(formatter)
+        new_io.error_output.set_formatter(formatter)
 
-        self.io = io
+        self.io = new_io
 
-    def println(self, msg: str = ""):
+    def println(self, msg: str = "", mode: str = "all"):
+        if mode != 'all':
+            if not getattr(self.io, f"is_{mode}")():
+                return
+
         self.io.write_line(msg)
 
-    def print(self, msg: str):
+    def print(self, msg: str, mode: str = "all"):
+        if mode != 'all':
+            if not getattr(self.io, f"is_{mode}")():
+                return
+
         self.io.write(msg)
 
 

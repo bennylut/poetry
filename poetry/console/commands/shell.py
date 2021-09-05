@@ -4,6 +4,7 @@ from distutils.util import strtobool
 from os import environ
 
 from .env_command import EnvCommand
+from .. import console
 
 
 class ShellCommand(EnvCommand):
@@ -17,6 +18,10 @@ If one doesn't exist yet, it will be created.
 """
 
     def handle(self) -> None:
+        if self.poetry.pyproject.is_parent():
+            console.println("This command is not applicable for parent projects")
+            return 1
+
         from poetry.utils.shell import Shell
 
         # Check if it's already activated or doesn't exist and won't be created

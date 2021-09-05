@@ -1,7 +1,7 @@
 import logging
 
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Tuple, Callable
 from typing import List
 from typing import Optional
 from typing import Union
@@ -12,7 +12,6 @@ from ..utils.authenticator import Authenticator
 from ..utils.helpers import get_cert
 from ..utils.helpers import get_client_cert
 from .uploader import Uploader
-
 
 if TYPE_CHECKING:
     from cleo.io import BufferedIO
@@ -28,25 +27,40 @@ class Publisher:
     Registers and publishes packages to remote repositories.
     """
 
-    def __init__(self, poetry: "Poetry", io: Union["BufferedIO", "ConsoleIO"]) -> None:
+    def __init__(self, poetry: "Poetry", io: Union["BufferedIO", "ConsoleIO"],
+                 user_credential_completer: Optional[Callable[[str, str], Tuple[str, str]]] = None) -> None:
         self._poetry = poetry
         self._package = poetry.package
         self._io = io
         self._uploader = Uploader(poetry, io)
         self._authenticator = Authenticator(poetry.config, self._io)
+        self._user_credential_completer = user_credential_completer or self._request_credentials
 
     @property
     def files(self) -> List[Path]:
         return self._uploader.files
 
+    def _request_credentials(self, username, password):
+        if username is None:
+            username = Question("Username:").ask(self._io)
+
+            # skip password input if no username is provided, assume unauthenticated
+        if username and password is None:
+            qpassword = Question("Password:")
+            qpassword.hide(True)
+
+            password = qpassword.ask(self._io)
+
+        return username, password
+
     def publish(
-        self,
-        repository_name: Optional[str],
-        username: Optional[str],
-        password: Optional[str],
-        cert: Optional[Path] = None,
-        client_cert: Optional[Path] = None,
-        dry_run: Optional[bool] = False,
+            self,
+            repository_name: Optional[str],
+            username: Optional[str],
+            password: Optional[str],
+            cert: Optional[Path] = None,
+            client_cert: Optional[Path] = None,
+            dry_run: Optional[bool] = False,
     ) -> None:
         if not repository_name:
             url = "https://upload.pypi.org/legacy/"
@@ -78,17 +92,11 @@ class Publisher:
         resolved_client_cert = client_cert or get_client_cert(
             self._poetry.config, repository_name
         )
+
         # Requesting missing credentials but only if there is not a client cert defined.
         if not resolved_client_cert:
-            if username is None:
-                username = Question("Username:").ask(self._io)
-
-            # skip password input if no username is provided, assume unauthenticated
-            if username and password is None:
-                qpassword = Question("Password:")
-                qpassword.hide(True)
-
-                password = qpassword.ask(self._io)
+            if not (username and password):
+                username, password = self._user_credential_completer(username, password)
 
         self._uploader.auth(username, password)
 

@@ -1,6 +1,7 @@
 from cleo.helpers import option
 
 from .installer_command import InstallerCommand
+from .. import console
 
 
 class LockCommand(InstallerCommand):
@@ -31,17 +32,19 @@ file.
     loggers = ["poetry.repositories.pypi_repository"]
 
     def handle(self) -> int:
-        self._installer.use_executor(
-            self.poetry.config.get("experimental.new-installer", False)
-        )
 
-        if self.option("check"):
-            return (
-                0
-                if self.poetry.locker.is_locked() and self.poetry.locker.is_fresh()
-                else 1
-            )
+        for poetry in self.poetry.all_sub_poetries():
 
-        self._installer.lock(update=not self.option("no-update"))
+            console.println(f"locking project: <c1>{poetry.pyproject.name}</c1>")
 
-        return self._installer.run()
+            if self.option("check") :
+                if not (poetry.locker.is_locked() and poetry.locker.is_fresh()):
+                    return 1
+            else:
+                poetry.installer.lock(update=not self.option("no-update"))
+                exit_code = poetry.installer.run()
+                if exit_code != 0:
+                    return exit_code
+
+        return 0
+

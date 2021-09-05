@@ -15,6 +15,12 @@ from contextlib import contextmanager
 from copy import deepcopy
 from pathlib import Path
 from subprocess import CalledProcessError
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from poetry.poetry import Poetry
+
 from typing import Any
 from typing import ContextManager
 from typing import Dict
@@ -40,8 +46,10 @@ from poetry.core.semver.helpers import parse_constraint
 from poetry.core.semver.version import Version
 from poetry.core.toml.file import TOMLFile
 from poetry.core.version.markers import BaseMarker
+
+from poetry.console import console
 from poetry.locations import CACHE_DIR
-from poetry.poetry import Poetry
+
 from poetry.utils._compat import decode
 from poetry.utils._compat import encode
 from poetry.utils._compat import list_to_shell_command
@@ -49,7 +57,6 @@ from poetry.utils._compat import metadata
 from poetry.utils.helpers import is_dir_writable
 from poetry.utils.helpers import paths_csv
 from poetry.utils.helpers import temporary_directory
-
 
 GET_ENVIRONMENT_INFO = """\
 import json
@@ -120,7 +127,6 @@ env = {
 print(json.dumps(env))
 """
 
-
 GET_BASE_PREFIX = """\
 import sys
 
@@ -155,11 +161,11 @@ print(json.dumps(sysconfig.get_paths()))
 
 class SitePackages:
     def __init__(
-        self,
-        purelib: Path,
-        platlib: Optional[Path] = None,
-        fallbacks: List[Path] = None,
-        skip_write_checks: bool = False,
+            self,
+            purelib: Path,
+            platlib: Optional[Path] = None,
+            fallbacks: List[Path] = None,
+            skip_write_checks: bool = False,
     ) -> None:
         self._purelib = purelib
         self._platlib = platlib or purelib
@@ -207,7 +213,7 @@ class SitePackages:
         return self._writable_candidates
 
     def make_candidates(
-        self, path: Path, writable_only: bool = False, strict: bool = False
+            self, path: Path, writable_only: bool = False, strict: bool = False
     ) -> List[Path]:
         candidates = self._candidates if not writable_only else self.writable_candidates
         if path.is_absolute():
@@ -236,7 +242,7 @@ class SitePackages:
         return results
 
     def distributions(
-        self, name: Optional[str] = None, writable_only: bool = False
+            self, name: Optional[str] = None, writable_only: bool = False
     ) -> Iterable[metadata.PathDistribution]:
         path = list(
             map(
@@ -244,12 +250,12 @@ class SitePackages:
             )
         )
         for distribution in metadata.PathDistribution.discover(
-            name=name, path=path
+                name=name, path=path
         ):  # type: metadata.PathDistribution
             yield distribution
 
     def find_distribution(
-        self, name: str, writable_only: bool = False
+            self, name: str, writable_only: bool = False
     ) -> Optional[metadata.PathDistribution]:
         for distribution in self.distributions(name=name, writable_only=writable_only):
             return distribution
@@ -257,27 +263,27 @@ class SitePackages:
             return None
 
     def find_distribution_files_with_suffix(
-        self, distribution_name: str, suffix: str, writable_only: bool = False
+            self, distribution_name: str, suffix: str, writable_only: bool = False
     ) -> Iterable[Path]:
         for distribution in self.distributions(
-            name=distribution_name, writable_only=writable_only
+                name=distribution_name, writable_only=writable_only
         ):
             for file in distribution.files:
                 if file.name.endswith(suffix):
                     yield Path(distribution.locate_file(file))
 
     def find_distribution_files_with_name(
-        self, distribution_name: str, name: str, writable_only: bool = False
+            self, distribution_name: str, name: str, writable_only: bool = False
     ) -> Iterable[Path]:
         for distribution in self.distributions(
-            name=distribution_name, writable_only=writable_only
+                name=distribution_name, writable_only=writable_only
         ):
             for file in distribution.files:
                 if file.name == name:
                     yield Path(distribution.locate_file(file))
 
     def find_distribution_nspkg_pth_files(
-        self, distribution_name: str, writable_only: bool = False
+            self, distribution_name: str, writable_only: bool = False
     ) -> Iterable[Path]:
         return self.find_distribution_files_with_suffix(
             distribution_name=distribution_name,
@@ -286,7 +292,7 @@ class SitePackages:
         )
 
     def find_distribution_direct_url_json_files(
-        self, distribution_name: str, writable_only: bool = False
+            self, distribution_name: str, writable_only: bool = False
     ) -> Iterable[Path]:
         return self.find_distribution_files_with_name(
             distribution_name=distribution_name,
@@ -298,7 +304,7 @@ class SitePackages:
         paths = []
 
         for distribution in self.distributions(
-            name=distribution_name, writable_only=True
+                name=distribution_name, writable_only=True
         ):
             for file in distribution.files:
                 file = Path(distribution.locate_file(file))
@@ -314,13 +320,13 @@ class SitePackages:
         return paths
 
     def _path_method_wrapper(
-        self,
-        path: Union[str, Path],
-        method: str,
-        *args: Any,
-        return_first: bool = True,
-        writable_only: bool = False,
-        **kwargs: Any,
+            self,
+            path: Union[str, Path],
+            method: str,
+            *args: Any,
+            return_first: bool = True,
+            writable_only: bool = False,
+            **kwargs: Any,
     ) -> Union[Tuple[Path, Any], List[Tuple[Path, Any]]]:
         if isinstance(path, str):
             path = Path(path)
@@ -359,9 +365,9 @@ class SitePackages:
         )
 
     def find(
-        self,
-        path: Union[str, Path],
-        writable_only: bool = False,
+            self,
+            path: Union[str, Path],
+            writable_only: bool = False,
     ) -> List[Path]:
         return [
             value[0]
@@ -379,7 +385,6 @@ class SitePackages:
 
 
 class EnvError(Exception):
-
     pass
 
 
@@ -424,7 +429,10 @@ class EnvManager:
 
     ENVS_FILE = "envs.toml"
 
-    def __init__(self, poetry: Poetry) -> None:
+    def __init__(self, poetry: "Poetry") -> None:
+        if poetry.pyproject.is_parent():
+            raise ValueError("could not manage environment of a parent project")
+
         self._poetry = poetry
 
     def activate(self, python: str, io: IO) -> "Env":
@@ -482,7 +490,7 @@ class EnvManager:
                 if patch != current_patch:
                     create = True
 
-            self.create_venv(io, executable=python, force=create)
+            self.create_venv(executable=python, force=create)
 
             return self.get(reload=True)
 
@@ -516,7 +524,7 @@ class EnvManager:
                 if patch != current_patch:
                     create = True
 
-            self.create_venv(io, executable=python, force=create)
+            self.create_venv(executable=python, force=create)
 
         # Activate
         envs[base_env_name] = {"minor": minor, "patch": patch}
@@ -634,9 +642,9 @@ class EnvManager:
 
         venv = self._poetry.file.parent / ".venv"
         if (
-            self._poetry.config.get("virtualenvs.in-project")
-            and venv.exists()
-            and venv.is_dir()
+                self._poetry.config.get("virtualenvs.in-project")
+                and venv.exists()
+                and venv.is_dir()
         ):
             env_list.insert(0, VirtualEnv(venv))
         return env_list
@@ -733,11 +741,10 @@ class EnvManager:
         return VirtualEnv(venv)
 
     def create_venv(
-        self,
-        io: IO,
-        name: Optional[str] = None,
-        executable: Optional[str] = None,
-        force: bool = False,
+            self,
+            name: Optional[str] = None,
+            executable: Optional[str] = None,
+            force: bool = False,
     ) -> Union["SystemEnv", "VirtualEnv"]:
         if self._env is not None and not force:
             return self._env
@@ -796,7 +803,7 @@ class EnvManager:
                     self._poetry.package.python_versions, python_patch
                 )
 
-            io.write_line(
+            console.println(
                 "<warning>The currently activated Python version {} "
                 "is not supported by the project ({}).\n"
                 "Trying to find and use a compatible version.</warning> ".format(
@@ -805,25 +812,24 @@ class EnvManager:
             )
 
             for python_to_try in reversed(
-                sorted(
-                    self._poetry.package.AVAILABLE_PYTHONS,
-                    key=lambda v: (v.startswith("3"), -len(v), v),
-                )
+                    sorted(
+                        self._poetry.package.AVAILABLE_PYTHONS,
+                        key=lambda v: (v.startswith("3"), -len(v), v),
+                    )
             ):
                 if len(python_to_try) == 1:
                     if not parse_constraint(f"^{python_to_try}.0").allows_any(
-                        supported_python
+                            supported_python
                     ):
                         continue
                 elif not supported_python.allows_all(
-                    parse_constraint(python_to_try + ".*")
+                        parse_constraint(python_to_try + ".*")
                 ):
                     continue
 
                 python = "python" + python_to_try
 
-                if io.is_debug():
-                    io.write_line(f"<debug>Trying {python}</debug>")
+                console.println(f"<debug>Trying {python}</debug>", mode="debug")
 
                 try:
                     python_patch = decode(
@@ -846,7 +852,7 @@ class EnvManager:
                     continue
 
                 if supported_python.allows(Version.parse(python_patch)):
-                    io.write_line(f"Using <c1>{python}</c1> ({python_patch})")
+                    console.println(f"Using <c1>{python}</c1> ({python_patch})")
                     executable = python
                     python_minor = ".".join(python_patch.split(".")[:2])
                     break
@@ -865,7 +871,7 @@ class EnvManager:
 
         if not venv.exists():
             if create_venv is False:
-                io.write_line(
+                console.println(
                     "<fg=black;bg=yellow>"
                     "Skipping virtualenv creation, "
                     "as specified in config file."
@@ -874,25 +880,25 @@ class EnvManager:
 
                 return self.get_system_env()
 
-            io.write_line(
+            console.println(
                 "Creating virtualenv <c1>{}</> in {}".format(name, str(venv_path))
             )
         else:
             create_venv = False
             if force:
                 if not env.is_sane():
-                    io.write_line(
+                    console.println(
                         "<warning>The virtual environment found in {} seems to be broken.</warning>".format(
                             env.path
                         )
                     )
-                io.write_line(
+                console.println(
                     "Recreating virtualenv <c1>{}</> in {}".format(name, str(venv))
                 )
                 self.remove_venv(venv)
                 create_venv = True
-            elif io.is_very_verbose():
-                io.write_line(f"Virtualenv <c1>{name}</> already exists.")
+            else:
+                console.println(f"Virtualenv <c1>{name}</> already exists.", "very_verbose")
 
         if create_venv:
             self.build_venv(
@@ -927,13 +933,13 @@ class EnvManager:
 
     @classmethod
     def build_venv(
-        cls,
-        path: Union[Path, str],
-        executable: Optional[Union[str, Path]] = None,
-        flags: Dict[str, bool] = None,
-        with_pip: Optional[bool] = None,
-        with_wheel: Optional[bool] = None,
-        with_setuptools: Optional[bool] = None,
+            cls,
+            path: Union[Path, str],
+            executable: Optional[Union[str, Path]] = None,
+            flags: Dict[str, bool] = None,
+            with_pip: Optional[bool] = None,
+            with_wheel: Optional[bool] = None,
+            with_setuptools: Optional[bool] = None,
     ) -> virtualenv.run.session.Session:
         flags = flags or {}
 
@@ -1545,10 +1551,10 @@ class VirtualEnv(Env):
         return super()._run(cmd, **kwargs)
 
     def get_temp_environ(
-        self,
-        environ: Optional[Dict[str, str]] = None,
-        exclude: Optional[List[str]] = None,
-        **kwargs: str,
+            self,
+            environ: Optional[Dict[str, str]] = None,
+            exclude: Optional[List[str]] = None,
+            **kwargs: str,
     ) -> Dict[str, str]:
         exclude = exclude or []
         exclude.extend(["PYTHONHOME", "__PYVENV_LAUNCHER__"])
@@ -1591,7 +1597,7 @@ class GenericEnv(VirtualEnv):
 
 class NullEnv(SystemEnv):
     def __init__(
-        self, path: Path = None, base: Optional[Path] = None, execute: bool = False
+            self, path: Path = None, base: Optional[Path] = None, execute: bool = False
     ) -> None:
         if path is None:
             path = Path(sys.prefix)
@@ -1622,11 +1628,11 @@ class NullEnv(SystemEnv):
 
 @contextmanager
 def ephemeral_environment(
-    executable=None,
-    flags: Dict[str, bool] = None,
-    with_pip: bool = False,
-    with_wheel: Optional[bool] = None,
-    with_setuptools: Optional[bool] = None,
+        executable=None,
+        flags: Dict[str, bool] = None,
+        with_pip: bool = False,
+        with_wheel: Optional[bool] = None,
+        with_setuptools: Optional[bool] = None,
 ) -> ContextManager[VirtualEnv]:
     with temporary_directory() as tmp_dir:
         # TODO: cache PEP 517 build environment corresponding to each project venv
@@ -1644,17 +1650,17 @@ def ephemeral_environment(
 
 class MockEnv(NullEnv):
     def __init__(
-        self,
-        version_info: Tuple[int, int, int] = (3, 7, 0),
-        python_implementation: str = "CPython",
-        platform: str = "darwin",
-        os_name: str = "posix",
-        is_venv: bool = False,
-        pip_version: str = "19.1",
-        sys_path: Optional[List[str]] = None,
-        marker_env: Dict[str, Any] = None,
-        supported_tags: List[Tag] = None,
-        **kwargs: Any,
+            self,
+            version_info: Tuple[int, int, int] = (3, 7, 0),
+            python_implementation: str = "CPython",
+            platform: str = "darwin",
+            os_name: str = "posix",
+            is_venv: bool = False,
+            pip_version: str = "19.1",
+            sys_path: Optional[List[str]] = None,
+            marker_env: Dict[str, Any] = None,
+            supported_tags: List[Tag] = None,
+            **kwargs: Any,
     ):
         super().__init__(**kwargs)
 

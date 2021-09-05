@@ -6,6 +6,7 @@ from cleo.helpers import option
 
 from .init import InitCommand
 from .installer_command import InstallerCommand
+from .. import console
 
 
 class AddCommand(InstallerCommand, InitCommand):
@@ -76,6 +77,10 @@ class AddCommand(InstallerCommand, InitCommand):
     loggers = ["poetry.repositories.pypi_repository", "poetry.inspection.info"]
 
     def handle(self) -> int:
+        if self.poetry.pyproject.is_parent():
+            console.println("This command is not applicable for parent projects")
+            return 1
+
         from tomlkit import inline_table
         from tomlkit import parse as parse_toml
         from tomlkit import table
@@ -202,6 +207,7 @@ class AddCommand(InstallerCommand, InitCommand):
                     constraint,
                     groups=[group],
                     root_dir=self.poetry.file.parent,
+                    project=self.poetry.pyproject
                 )
             )
 

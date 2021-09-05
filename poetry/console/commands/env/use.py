@@ -1,6 +1,7 @@
 from cleo.helpers import argument
 
 from ..command import Command
+from ... import console
 
 
 class EnvUseCommand(Command):
@@ -10,7 +11,11 @@ class EnvUseCommand(Command):
 
     arguments = [argument("python", "The python executable to use.")]
 
-    def handle(self) -> None:
+    def handle(self) -> int:
+        if self.poetry.pyproject.is_parent():
+            console.println("This command is not applicable for parent projects")
+            return 1
+
         from poetry.utils.env import EnvManager
 
         manager = EnvManager(self.poetry)
@@ -18,8 +23,10 @@ class EnvUseCommand(Command):
         if self.argument("python") == "system":
             manager.deactivate(self._io)
 
-            return
+            return 0
 
         env = manager.activate(self.argument("python"), self._io)
 
         self.line("Using virtualenv: <comment>{}</>".format(env.path))
+
+        return 0

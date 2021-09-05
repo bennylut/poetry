@@ -30,6 +30,9 @@ class PluginManager:
         for entrypoint in plugin_entrypoints:
             self._load_plugin_entrypoint(entrypoint)
 
+    def is_plugins_disabled(self):
+        return self._disable_plugins
+
     def get_plugin_entry_points(self) -> List[entrypoints.EntryPoint]:
         return entrypoints.get_group_all(f"poetry.{self._type}")
 
