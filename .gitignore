@@ -37,7 +37,7 @@ MANIFEST.in
 .venv
 /releases/*
 pip-wheel-metadata
-/poetry.toml
+/etc/rp/poetry.toml
 
 .idea
 

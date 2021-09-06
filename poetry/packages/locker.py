@@ -55,6 +55,11 @@ class Locker:
         self._lock_data = None
         self._content_hash = self._get_content_hash()
 
+        lock_dir = self._lock.path.parent
+        if not lock_dir.exists():
+            lock_dir.mkdir(parents=True)
+
+
     @property
     def lock(self) -> TOMLFile:
         return self._lock

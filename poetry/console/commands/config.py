@@ -104,11 +104,12 @@ To remove a repository (repo is a short alias for repositories):
         config_file = TOMLFile(Path(CONFIG_DIR) / "config.toml")
 
         try:
-            local_config_file = TOMLFile(self.poetry.file.parent / "poetry.toml")
+            local_config_file = TOMLFile(self.poetry.pyproject.project_management_files / "config.toml")
             if local_config_file.exists():
                 config.merge(local_config_file.read())
         except (RuntimeError, PyProjectException):
-            local_config_file = TOMLFile(Path.cwd() / "poetry.toml")
+            # not sure when this happens - need to check later
+            local_config_file = TOMLFile(Path.cwd() / "etc/rp/config.toml")
 
         if self.option("local"):
             config.set_config_source(FileConfigSource(local_config_file))

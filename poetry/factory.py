@@ -62,7 +62,7 @@ class Factory(BaseFactory):
             io = NullIO()
 
         locker = Locker(
-            base_poetry.file.parent / "poetry.lock", base_poetry.local_config
+            base_poetry.pyproject.project_management_files / "lock.toml", base_poetry.local_config
         )
 
         # Loading global configuration
@@ -74,7 +74,7 @@ class Factory(BaseFactory):
             if p.parent:
                 apply_config(p.parent)
 
-            local_config_file = TOMLFile(p.path.parent / "poetry.toml")
+            local_config_file = TOMLFile(base_poetry.pyproject.project_management_files / "config.toml")
             if local_config_file.exists():
                 if io.is_debug():
                     io.write_line(
