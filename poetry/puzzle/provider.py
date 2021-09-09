@@ -239,7 +239,7 @@ class Provider:
             revision = git.rev_parse(reference, tmp_dir).strip()
 
             package = cls.get_package_from_directory(tmp_dir, name=name)
-            package._source_type = "git"
+            package.source_type = "git"
             package._source_url = url
             package._source_reference = reference
             package._source_resolved_reference = revision

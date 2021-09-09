@@ -33,7 +33,6 @@ from .operations.operation import Operation
 from .operations.uninstall import Uninstall
 from .operations.update import Update
 
-
 if TYPE_CHECKING:
     from cleo.io.io import IO  # noqa
 
@@ -47,12 +46,12 @@ if TYPE_CHECKING:
 
 class Executor:
     def __init__(
-        self,
-        env: "Env",
-        pool: "Pool",
-        config: "Config",
-        io: "IO",
-        parallel: bool = None,
+            self,
+            env: "Env",
+            pool: "Pool",
+            config: "Config",
+            io: "IO",
+            parallel: bool = None,
     ) -> None:
         self._env = env
         self._io = io
@@ -120,7 +119,7 @@ class Executor:
         return self
 
     def pip_install(
-        self, req: Union[Path, str], upgrade: bool = False, editable: bool = False
+            self, req: Union[Path, str], upgrade: bool = False, editable: bool = False
     ) -> int:
         func = pip_install
         if editable:
@@ -131,8 +130,8 @@ class Executor:
         except EnvCommandError as e:
             output = decode(e.e.output)
             if (
-                "KeyboardInterrupt" in output
-                or "ERROR: Operation cancelled by user" in output
+                    "KeyboardInterrupt" in output
+                    or "ERROR: Operation cancelled by user" in output
             ):
                 return -2
             raise
@@ -165,8 +164,8 @@ class Executor:
                 # We need to explicitly check source type here, see:
                 # https://github.com/python-poetry/poetry-core/pull/98
                 is_parallel_unsafe = operation.job_type == "uninstall" or (
-                    operation.package.develop
-                    and operation.package.source_type in {"directory", "sibling", "git"}
+                        operation.package.develop
+                        and operation.package.source_type in {"directory", "sibling", "git"}
                 )
                 if not operation.skipped and is_parallel_unsafe:
                     serial_operations.append(operation)
@@ -194,7 +193,7 @@ class Executor:
 
     def _write(self, operation: "OperationTypes", line: str) -> None:
         if not self.supports_fancy_output() or not self._should_write_operation(
-            operation
+                operation
         ):
             return
 
@@ -334,7 +333,7 @@ class Executor:
         return result
 
     def _increment_operations_count(
-        self, operation: "OperationTypes", executed: bool
+            self, operation: "OperationTypes", executed: bool
     ) -> None:
         with self._lock:
             if executed:
@@ -349,8 +348,8 @@ class Executor:
         except EnvCommandError as e:
             output = decode(e.e.output)
             if (
-                "KeyboardInterrupt" in output
-                or "ERROR: Operation cancelled by user" in output
+                    "KeyboardInterrupt" in output
+                    or "ERROR: Operation cancelled by user" in output
             ):
                 return -2
 
@@ -359,11 +358,11 @@ class Executor:
         return 0
 
     def get_operation_message(
-        self,
-        operation: "OperationTypes",
-        done: bool = False,
-        error: bool = False,
-        warning: bool = False,
+            self,
+            operation: "OperationTypes",
+            done: bool = False,
+            error: bool = False,
+            warning: bool = False,
     ) -> str:
         base_tag = "fg=default"
         operation_color = "c2"
@@ -563,18 +562,18 @@ class Executor:
         else:
             req = Path(package.source_url).resolve(strict=False)
 
-        pyproject = PyProject.read(os.path.join(req, "pyproject.toml"), None)
+        # pyproject = PyProject.read(os.path.join(req, "pyproject.toml"), None)
 
-        if pyproject.is_poetry_project():
+        if PyProject.has_poetry_section(req / "pyproject.toml"):
             # Even if there is a build system specified
             # some versions of pip (< 19.0.0) don't understand it
             # so we need to check the version of pip to know
             # if we can rely on the build system
             legacy_pip = (
-                self._env.pip_version
-                < self._env.pip_version.__class__.from_parts(19, 0, 0)
+                    self._env.pip_version
+                    < self._env.pip_version.__class__.from_parts(19, 0, 0)
             )
-            package_poetry = Factory().create_poetry(pyproject.file.path.parent)
+            package_poetry = Factory().create_poetry(req)
 
             if package.develop and not package_poetry.package.build_script:
                 from poetry.masonry.builders.editable import EditableBuilder
@@ -673,11 +672,11 @@ class Executor:
 
         if package.files:
             archive_hash = (
-                "sha256:"
-                + FileDependency(
-                    package.name,
-                    Path(archive.path) if isinstance(archive, Link) else archive,
-                ).hash()
+                    "sha256:"
+                    + FileDependency(
+                package.name,
+                Path(archive.path) if isinstance(archive, Link) else archive,
+            ).hash()
             )
             if archive_hash not in {f["hash"] for f in package.files}:
                 raise RuntimeError(
@@ -756,7 +755,7 @@ class Executor:
             # That's not what we want so we remove the direct_url.json file,
             # if it exists.
             for (
-                direct_url_json
+                    direct_url_json
             ) in self._env.site_packages.find_distribution_direct_url_json_files(
                 distribution_name=package.name, writable_only=True
             ):
@@ -778,7 +777,7 @@ class Executor:
 
         if url_reference:
             for dist in self._env.site_packages.distributions(
-                name=package.name, writable_only=True
+                    name=package.name, writable_only=True
             ):
                 dist._path.joinpath("direct_url.json").write_text(
                     json.dumps(url_reference),
@@ -802,7 +801,7 @@ class Executor:
                         )
 
     def _create_git_url_reference(
-        self, package: "Package"
+            self, package: "Package"
     ) -> Dict[str, Union[str, Dict[str, str]]]:
         reference = {
             "url": package.source_url,
@@ -816,7 +815,7 @@ class Executor:
         return reference
 
     def _create_url_url_reference(
-        self, package: "Package"
+            self, package: "Package"
     ) -> Dict[str, Union[str, Dict[str, str]]]:
         archive_info = {}
 
@@ -828,7 +827,7 @@ class Executor:
         return reference
 
     def _create_file_url_reference(
-        self, package: "Package"
+            self, package: "Package"
     ) -> Dict[str, Union[str, Dict[str, str]]]:
         archive_info = {}
 
@@ -843,7 +842,7 @@ class Executor:
         return reference
 
     def _create_directory_url_reference(
-        self, package: "Package"
+            self, package: "Package"
     ) -> Dict[str, Union[str, Dict[str, str]]]:
         dir_info = {}
 
