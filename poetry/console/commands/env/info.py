@@ -19,9 +19,12 @@ class EnvInfoCommand(Command):
 
     def handle(self) -> Optional[int]:
 
-        from poetry.utils.env import EnvManager
+        env = self.poetry.env
 
-        env = EnvManager(self.poetry).get()
+        if env is None:
+            console.println("<error>This project does not requires python interpreter and therefore cannot have virtual-envs.</>\n"
+                            "To change that, add a python dependency to <c1>pyproject.toml</c1>")
+            return 1
 
         if self.option("path"):
             if not env.is_venv():

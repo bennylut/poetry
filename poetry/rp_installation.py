@@ -16,7 +16,7 @@ from poetry.console.exceptions import PoetrySimpleConsoleException
 from poetry.repositories.installed_repository import InstalledRepository
 from poetry.repositories.pool import Pool
 from poetry.repositories.pypi_repository import PyPiRepository
-from poetry.core.packages.utils.props_ext import cached_property
+from poetry.core.utils.props_ext import cached_property
 
 
 class RpInstallation:
@@ -81,6 +81,7 @@ class RpInstallation:
         if not version:
             version = ">=" + __version__
 
+        console.println(f"Attempting to find update version with constraint: {version}")
         repo = self._pool.repositories[0]
         packages = repo.find_packages(
             Dependency("relaxed-poetry", version)

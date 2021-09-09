@@ -17,7 +17,12 @@ class ShellCommand(EnvCommand):
 If one doesn't exist yet, it will be created.
 """
 
-    def handle(self) -> None:
+    def handle(self) -> int:
+
+        if self.poetry.env is None:
+            console.println("<error>This project does not requires python interpreter and therefore does not have a virtual-envs.</>\n"
+                            "To change that, add a python dependency to <c1>pyproject.toml</c1>")
+            return 1
 
         from poetry.utils.shell import Shell
 
@@ -31,7 +36,7 @@ If one doesn't exist yet, it will be created.
                 "<info>{}</>".format(self.env.path)
             )
 
-            return
+            return 0
 
         self.line("Spawning shell within <info>{}</>".format(self.env.path))
 
@@ -40,3 +45,5 @@ If one doesn't exist yet, it will be created.
         shell = Shell.get()
         shell.activate(self.env)
         environ.pop("POETRY_ACTIVE")
+
+        return 0

@@ -33,6 +33,8 @@ class BuildCommand(EnvCommand):
             self._build(fmt, poetry)
 
     def _build(self, fmt: str, poetry: Poetry):
+        if poetry.env is None:
+            return
 
         package = poetry.package
         self.line(
@@ -41,7 +43,7 @@ class BuildCommand(EnvCommand):
             )
         )
 
-        env = EnvManager(poetry).get()
+        env = poetry.env
 
         if not self.option("keep-python-bounds"):
             from poetry.puzzle import Solver

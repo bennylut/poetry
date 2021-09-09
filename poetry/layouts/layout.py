@@ -33,7 +33,7 @@ packages = []
 [tool.poetry.group.dev.dependencies]
 """
 
-BUILD_SYSTEM_MIN_VERSION: Optional[str] = "0.0.7"
+BUILD_SYSTEM_MIN_VERSION: Optional[str] = "0.1.2"
 BUILD_SYSTEM_MAX_VERSION: Optional[str] = None
 
 

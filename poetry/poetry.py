@@ -57,7 +57,10 @@ class Poetry(BasePoetry):
 
     @cached_property
     def env(self) -> Optional["Env"]:
-        from .utils.env import Env, EnvManager
+        if not self.pyproject.requires_python:
+            return None
+
+        from .utils.env import EnvManager
 
         env_manager = EnvManager(self)
         env = env_manager.create_venv(ignore_activated_env=True)
@@ -67,6 +70,10 @@ class Poetry(BasePoetry):
 
     @cached_property
     def installer(self) -> Optional["Installer"]:
+
+        if self.env is None:
+            return None
+
         installer = Installer(
             console.io,
             self.env,

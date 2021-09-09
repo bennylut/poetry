@@ -32,6 +32,8 @@ class UpdateCommand(InstallerCommand):
         packages = self.argument("packages")
 
         for poetry in self.poetry.all_project_poetries():
+            if poetry.env is None:
+                continue
 
             console.println(f"Updating project: <c1>{poetry.pyproject.name}</c1>")
 

@@ -10,7 +10,6 @@ from .. import console
 
 
 class AddCommand(InstallerCommand, InitCommand):
-
     name = "add"
     description = "Adds a new dependency to <comment>pyproject.toml</>."
 
@@ -77,6 +76,11 @@ class AddCommand(InstallerCommand, InitCommand):
     loggers = ["poetry.repositories.pypi_repository", "poetry.inspection.info"]
 
     def handle(self) -> int:
+
+        if self.poetry.env is None:
+            console.println("<error>This project does not requires python interpreter and therefore cannot have dependencies.</>\n"
+                            "To change that, add a python dependency to <c1>pyproject.toml</c1>")
+            return 1
 
         from tomlkit import inline_table
         from tomlkit import parse as parse_toml
@@ -234,7 +238,7 @@ class AddCommand(InstallerCommand, InitCommand):
         return status
 
     def get_existing_packages_from_input(
-        self, packages: List[str], section: Dict
+            self, packages: List[str], section: Dict
     ) -> List[str]:
         existing_packages = []
 

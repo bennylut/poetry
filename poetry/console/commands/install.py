@@ -149,6 +149,9 @@ dependencies and not including the current project, run the command with the
 
         for poetry in self.poetry.all_project_poetries():
             installer = poetry.installer
+            if not installer:
+                continue
+
             installer.extras(extras)
             installer.only_groups(only_groups)
             installer.without_groups(excluded_groups)

@@ -13,6 +13,11 @@ class EnvListCommand(Command):
 
     def handle(self) -> int:
 
+        if self.poetry.env is None:
+            console.println("<error>This project does not requires python interpreter and therefore cannot have virtual-envs.</>\n"
+                            "To change that, add a python dependency to <c1>pyproject.toml</c1>")
+            return 1
+
         from poetry.utils.env import EnvManager
 
         manager = EnvManager(self.poetry)

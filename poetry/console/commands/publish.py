@@ -48,6 +48,8 @@ the config command.
 
         cred_completer = _CredentialCompleter().complete if self.poetry.pyproject.is_parent() else None
         for poetry in self.poetry.all_project_poetries():
+            if poetry.env is None:
+                continue
 
             publisher = Publisher(poetry, self.io, user_credential_completer=cred_completer)
 

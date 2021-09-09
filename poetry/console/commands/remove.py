@@ -34,6 +34,10 @@ list of installed packages
     loggers = ["poetry.repositories.pypi_repository", "poetry.inspection.info"]
 
     def handle(self) -> int:
+        if self.poetry.env is None:
+            console.println("<error>This project does not requires python interpreter and therefore cannot have dependencies.</>\n"
+                            "To change that, add a python dependency to <c1>pyproject.toml</c1>")
+            return 1
 
         packages = self.argument("packages")
 

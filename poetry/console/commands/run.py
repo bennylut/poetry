@@ -22,6 +22,11 @@ class RunCommand(EnvCommand):
 
     def handle(self) -> Any:
 
+        if self.poetry.env is None:
+            console.println("<error>This project does not requires python interpreter and therefore cannot run scripts.</>\n"
+                            "To change that, add a python dependency to <c1>pyproject.toml</c1>")
+            return 1
+
         args = self.argument("args")
         script = args[0]
         scripts = self.poetry.local_config.get("scripts")

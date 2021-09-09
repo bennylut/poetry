@@ -7,7 +7,7 @@ from cleo.helpers import argument
 from cleo.helpers import option
 
 from .env_command import EnvCommand
-
+from .. import console
 
 if TYPE_CHECKING:
     from cleo.io.io import IO  # noqa
@@ -20,7 +20,6 @@ if TYPE_CHECKING:
 
 
 class ShowCommand(EnvCommand):
-
     name = "show"
     description = "Shows information about packages."
 
@@ -75,6 +74,13 @@ lists all packages available."""
     colors = ["cyan", "yellow", "green", "magenta", "blue"]
 
     def handle(self) -> Optional[int]:
+
+        if self.poetry.env is None:
+            console.println(
+                "<error>This project does not requires python interpreter and therefore cannot have dependencies.</>\n"
+                "To change that, add a <c1>python</c1> dependency to <c1>pyproject.toml</c1>")
+            return 1
+
         from cleo.io.null_io import NullIO
         from cleo.terminal import Terminal
 
@@ -285,9 +291,9 @@ lists all packages available."""
                         install_marker = " (!)"
 
             if (
-                show_latest
-                and self.option("outdated")
-                and latest_statuses[locked.pretty_name] == "up-to-date"
+                    show_latest
+                    and self.option("outdated")
+                    and latest_statuses[locked.pretty_name] == "up-to-date"
             ):
                 continue
 
@@ -334,7 +340,7 @@ lists all packages available."""
             self.line(line)
 
     def display_package_tree(
-        self, io: "IO", package: "Package", installed_repo: "Repository"
+            self, io: "IO", package: "Package", installed_repo: "Repository"
     ) -> None:
         io.write("<c1>{}</c1>".format(package.pretty_name))
         description = ""
@@ -371,13 +377,13 @@ lists all packages available."""
             )
 
     def _display_tree(
-        self,
-        io: "IO",
-        dependency: "Dependency",
-        installed_repo: "Repository",
-        packages_in_tree: List[str],
-        previous_tree_bar: str = "├",
-        level: int = 1,
+            self,
+            io: "IO",
+            dependency: "Dependency",
+            installed_repo: "Repository",
+            packages_in_tree: List[str],
+            previous_tree_bar: str = "├",
+            level: int = 1,
     ) -> None:
         previous_tree_bar = previous_tree_bar.replace("├", "│")
 
@@ -441,7 +447,7 @@ lists all packages available."""
             io.error_output.formatter.set_style(color, style)
 
     def find_latest_package(
-        self, package: "Package", root: "ProjectPackage"
+            self, package: "Package", root: "ProjectPackage"
     ) -> Union["Package", bool]:
         from cleo.io.null_io import NullIO
 
@@ -484,7 +490,7 @@ lists all packages available."""
         return "update-possible"
 
     def get_installed_status(
-        self, locked: "Package", installed_repo: "InstalledRepository"
+            self, locked: "Package", installed_repo: "InstalledRepository"
     ) -> str:
         for package in installed_repo.packages:
             if locked.name == package.name:
