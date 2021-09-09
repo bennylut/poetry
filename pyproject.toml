@@ -33,7 +33,7 @@ classifiers = [
 generate-setup-file = false
 
 [tool.relaxed-poetry.properties]
-relaxed-poetry-core-dep = "^0.0.8"
+relaxed-poetry-core-dep = "^0.1.1"
 
 # Requirements
 
