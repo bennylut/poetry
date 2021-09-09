@@ -29,7 +29,7 @@ class BuildCommand(EnvCommand):
         if self.option("format"):
             fmt = self.option("format")
 
-        for poetry in self.poetry.all_sub_poetries():
+        for poetry in self.poetry.all_project_poetries():
             self._build(fmt, poetry)
 
     def _build(self, fmt: str, poetry: Poetry):

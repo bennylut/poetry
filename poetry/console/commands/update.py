@@ -31,7 +31,7 @@ class UpdateCommand(InstallerCommand):
     def handle(self) -> int:
         packages = self.argument("packages")
 
-        for poetry in self.poetry.all_sub_poetries():
+        for poetry in self.poetry.all_project_poetries():
 
             console.println(f"Updating project: <c1>{poetry.pyproject.name}</c1>")
 

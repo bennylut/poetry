@@ -13,6 +13,8 @@ from poetry.core.masonry.builders.builder import Builder
 from poetry.core.masonry.builders.sdist import SdistBuilder
 from poetry.core.masonry.utils.package_include import PackageInclude
 from poetry.core.semver.version import Version
+
+from poetry.console import console
 from poetry.utils._compat import WINDOWS
 from poetry.utils._compat import decode
 from poetry.utils.helpers import is_dir_writable
@@ -45,17 +47,12 @@ class EditableBuilder(Builder):
         self._io = io
 
     def build(self, include_symlinks: bool = False) -> None:
-        self._debug(
-            "  - Building package <c1>{}</c1> in <info>editable</info> mode".format(
-                self._package.name
-            )
-        )
+        console.println(f"  - Building package <c1>{self._package.name}</c1> in <info>editable</info> mode",
+                        mode="debug")
 
         if self._package.build_script:
             if self._package.build_should_generate_setup():
-                self._debug(
-                    "  - <warning>Falling back on using a <b>setup.py</b></warning>"
-                )
+                console.println("  - <warning>Falling back on using a <b>setup.py</b></warning>", mode="debug")
                 return self._setup_build()
 
             self._run_build_script(self._package.build_script)
@@ -63,11 +60,7 @@ class EditableBuilder(Builder):
         for removed in self._env.site_packages.remove_distribution_files(
                 distribution_name=self._package.name
         ):
-            self._debug(
-                "  - Removed <c2>{}</c2> directory from <b>{}</b>".format(
-                    removed.name, removed.parent
-                )
-            )
+            console.println(f"  - Removed <c2>{removed.name}</c2> directory from <b>{removed.parent}</b>", mode="debug")
 
         added_files = []
         added_files += self._add_pth(include_symlinks)
@@ -75,7 +68,7 @@ class EditableBuilder(Builder):
         self._add_dist_info(added_files)
 
     def _run_build_script(self, build_script: Path) -> None:
-        self._debug("  - Executing build script: <b>{}</b>".format(build_script))
+        console.println(f"  - Executing build script: <b>{build_script}</b>", mode="debug")
         self._env.run("python", str(self._path.joinpath(build_script)), call=True)
 
     def _setup_build(self) -> None:
@@ -84,9 +77,7 @@ class EditableBuilder(Builder):
         has_setup = setup.exists()
 
         if has_setup:
-            self._io.write_line(
-                "<warning>A setup.py file already exists. Using it.</warning>"
-            )
+            console.println("<warning>A setup.py file already exists. Using it.</warning>")
         else:
             with setup.open("w", encoding="utf-8") as f:
                 f.write(decode(builder.build_setup()))
@@ -115,7 +106,7 @@ class EditableBuilder(Builder):
         link_targets = []
         for include in self._module.includes:
             if isinstance(include, PackageInclude) and (
-                include.is_module() or include.is_package()
+                    include.is_module() or include.is_package()
             ):
                 paths.add(include.base.resolve().as_posix())
                 link_targets.append(include)
@@ -128,11 +119,9 @@ class EditableBuilder(Builder):
 
         # remove any pre-existing pth files for this package
         for file in self._env.site_packages.find(path=pth_file, writable_only=True):
-            self._debug(
-                "  - Removing existing <c2>{}</c2> from <b>{}</b> for {}".format(
-                    file.name, file.parent, self._poetry.file.parent
-                )
-            )
+            console.println(
+                f"  - Removing existing <c2>{file.name}</c2> from <b>{file.parent}</b> for {self._poetry.file.parent}",
+                mode="debug")
             # We can't use unlink(missing_ok=True) because it's not always available
             if file.exists():
                 file.unlink()
@@ -141,19 +130,20 @@ class EditableBuilder(Builder):
             pth_file = self._env.site_packages.write_text(
                 pth_file, content, encoding="utf-8"
             )
-            self._debug(
-                "  - Adding <c2>{}</c2> to <b>{}</b> for {}".format(
-                    pth_file.name, pth_file.parent, self._poetry.file.parent
-                )
-            )
+            console.println(
+                f"  - Adding <c2>{pth_file.name}</c2> to <b>{pth_file.parent}</b> for {self._poetry.file.parent}",
+                mode="debug")
 
             if include_symlinks:
+                console.print("  - Including symlinks to: ")
                 for link_target in link_targets:
+                    console.print(link_target.package + " ")
                     dst = self._env.site_packages.path.joinpath(link_target.package)
                     src = link_target.base.joinpath(link_target.package)
                     if dst.exists():
                         dst.unlink()
                     os.symlink(src, dst, src.is_dir())
+                console.println()
 
             return [pth_file]
         except OSError:
@@ -250,7 +240,7 @@ class EditableBuilder(Builder):
 
         if self.convert_entry_points():
             with dist_info.joinpath("entry_points.txt").open(
-                "w", encoding="utf-8"
+                    "w", encoding="utf-8"
             ) as f:
                 builder._write_entry_points(f)
 

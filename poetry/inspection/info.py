@@ -161,7 +161,7 @@ class PackageInfo:
 
         package.files = self.files
 
-        if root_dir or (self._source_type in {"directory"} and self._source_url):
+        if root_dir or (self._source_type in {"directory", "sibling"} and self._source_url):
             # this is a local poetry project, this means we can extract "richer" requirement information
             # eg: development requirements etc.
             poetry_package = self._get_poetry_package(path=root_dir or self._source_url)

@@ -166,7 +166,7 @@ class Executor:
                 # https://github.com/python-poetry/poetry-core/pull/98
                 is_parallel_unsafe = operation.job_type == "uninstall" or (
                     operation.package.develop
-                    and operation.package.source_type in {"directory", "git"}
+                    and operation.package.source_type in {"directory", "sibling", "git"}
                 )
                 if not operation.skipped and is_parallel_unsafe:
                     serial_operations.append(operation)
@@ -485,7 +485,7 @@ class Executor:
 
     def _install(self, operation: Union[Install, Update]) -> int:
         package = operation.package
-        if package.source_type == "directory":
+        if package.source_type in ["directory", "sibling"]:
             return self._install_directory(operation)
 
         if package.source_type == "git":
@@ -771,7 +771,7 @@ class Executor:
             url_reference = self._create_git_url_reference(package)
         elif package.source_type == "url":
             url_reference = self._create_url_url_reference(package)
-        elif package.source_type == "directory":
+        elif package.source_type in ["directory", "sibling"]:
             url_reference = self._create_directory_url_reference(package)
         elif package.source_type == "file":
             url_reference = self._create_file_url_reference(package)

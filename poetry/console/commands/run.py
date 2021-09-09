@@ -21,9 +21,6 @@ class RunCommand(EnvCommand):
     ]
 
     def handle(self) -> Any:
-        if self.poetry.pyproject.is_parent():
-            console.println("This command is not applicable for parent projects")
-            return 1
 
         args = self.argument("args")
         script = args[0]

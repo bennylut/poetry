@@ -33,7 +33,7 @@ file.
 
     def handle(self) -> int:
 
-        for poetry in self.poetry.all_sub_poetries():
+        for poetry in self.poetry.all_project_poetries():
 
             console.println(f"locking project: <c1>{poetry.pyproject.name}</c1>")
 

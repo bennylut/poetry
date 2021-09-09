@@ -12,9 +12,6 @@ class EnvUseCommand(Command):
     arguments = [argument("python", "The python executable to use.")]
 
     def handle(self) -> int:
-        if self.poetry.pyproject.is_parent():
-            console.println("This command is not applicable for parent projects")
-            return 1
 
         from poetry.utils.env import EnvManager
 

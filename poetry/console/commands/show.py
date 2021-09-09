@@ -449,7 +449,7 @@ lists all packages available."""
         from poetry.version.version_selector import VersionSelector
 
         # find the latest version allowed in this pool
-        if package.source_type in ("git", "file", "directory"):
+        if package.source_type in ("git", "file", "directory", "sibling"):
             requires = root.all_requires
 
             for dep in requires:

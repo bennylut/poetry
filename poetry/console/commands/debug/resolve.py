@@ -36,9 +36,6 @@ class DebugResolveCommand(InitCommand):
     loggers = ["poetry.repositories.pypi_repository", "poetry.inspection.info"]
 
     def handle(self) -> Optional[int]:
-        if self.poetry.pyproject.is_parent():
-            console.println("This command is not applicable for parent projects")
-            return 1
 
         from cleo.io.null_io import NullIO
 

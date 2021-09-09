@@ -34,9 +34,6 @@ list of installed packages
     loggers = ["poetry.repositories.pypi_repository", "poetry.inspection.info"]
 
     def handle(self) -> int:
-        if self.poetry.pyproject.is_parent():
-            console.println("This command is not applicable for parent projects")
-            return 1
 
         packages = self.argument("packages")
 

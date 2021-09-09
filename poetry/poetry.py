@@ -58,20 +58,15 @@ class Poetry(BasePoetry):
     @cached_property
     def env(self) -> Optional["Env"]:
         from .utils.env import Env, EnvManager
-        if self.pyproject.is_parent():
-            return None
 
         env_manager = EnvManager(self)
-        env = env_manager.create_venv()
+        env = env_manager.create_venv(ignore_activated_env=True)
 
         console.println(f"Using virtualenv: <comment>{env.path}</>", "verbose")
         return env
 
     @cached_property
     def installer(self) -> Optional["Installer"]:
-        if self.pyproject.is_parent():
-            return None
-
         installer = Installer(
             console.io,
             self.env,
@@ -110,13 +105,14 @@ class Poetry(BasePoetry):
             for source in self.pyproject.poetry_config.get("source", [])
         ]
 
-    def all_sub_poetries(self) -> Iterator["Poetry"]:
+    def all_project_poetries(self) -> Iterator["Poetry"]:
         from poetry.factory import Factory
         if self.pyproject.is_parent():
             plugins_disabled = self._plugin_manager.is_plugins_disabled() if self._plugin_manager else True
 
             for subproject in self.pyproject.sub_projects.values():
                 subpoetry = Factory().create_poetry_for_pyproject(subproject, disable_plugins=plugins_disabled)
-                yield from subpoetry.all_sub_poetries()
-        else:
-            yield self
+                # subpoetry.package.develop = True
+                yield from subpoetry.all_project_poetries()
+
+        yield self

@@ -32,7 +32,7 @@ class PipInstaller(BaseInstaller):
         self._pool = pool
 
     def install(self, package: "Package", update: bool = False) -> None:
-        if package.source_type == "directory":
+        if package.source_type == "directory" or package.source_type == "sibling":
             self.install_directory(package)
 
             return
@@ -45,7 +45,7 @@ class PipInstaller(BaseInstaller):
         args = ["install", "--no-deps"]
 
         if (
-            package.source_type not in {"git", "directory", "file", "url"}
+            package.source_type not in {"git", "directory", "file", "url", "sibling"}
             and package.source_url
         ):
             repository = self._pool.repository(package.source_reference)
@@ -147,13 +147,13 @@ class PipInstaller(BaseInstaller):
 
             return req
 
-        if package.source_type in ["file", "directory"]:
+        if package.source_type in ["file", "directory", "sibling"]:
             if package.root_dir:
                 req = (package.root_dir / package.source_url).as_posix()
             else:
                 req = os.path.realpath(package.source_url)
 
-            if package.develop and package.source_type == "directory":
+            if package.develop and package.source_type in ["directory","sibling"] :
                 req = ["-e", req]
 
             return req
@@ -260,7 +260,7 @@ class PipInstaller(BaseInstaller):
 
         # Now we just need to install from the source directory
         pkg = Package(package.name, package.version)
-        pkg._source_type = "directory"
+        pkg.source_type = "directory"
         pkg._source_url = str(src_dir)
         pkg.develop = package.develop
 

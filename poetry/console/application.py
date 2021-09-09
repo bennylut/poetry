@@ -278,10 +278,6 @@ class Application(BaseApplication):
         if not isinstance(command, InstallerCommand):
             return
 
-        # No Environment for parent projects = no installers
-        if command.poetry.pyproject.is_parent():
-            return
-
         # If the command already has an installer
         # we skip this step
         if command.installer is not None:

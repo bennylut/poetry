@@ -34,9 +34,6 @@ class ExportCommand(Command):
 
     def handle(self) -> int:
 
-        if self.poetry.pyproject.is_parent():
-            console.println("This command is not applicable for parent projects")
-            return 1
 
         fmt = self.option("format")
 

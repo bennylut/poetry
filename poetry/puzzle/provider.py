@@ -43,7 +43,6 @@ from poetry.utils.helpers import download_file
 from poetry.utils.helpers import safe_rmtree
 from poetry.utils.helpers import temporary_directory
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -54,16 +53,16 @@ class Indicator(ProgressIndicator):
         return f"{elapsed:.1f}s"
 
 
-def _installed_python_version_constraint(env: Env) -> VersionTypes :
+def _installed_python_version_constraint(env: Env) -> VersionTypes:
     i = env.version_info
     return parse_constraint(f"={i[0]}.{i[1]}.{i[2]}")
 
-class Provider:
 
+class Provider:
     UNSAFE_PACKAGES = set()
 
     def __init__(
-        self, package: Package, pool: Pool, io: Any, env: Optional[Env] = None
+            self, package: Package, pool: Pool, io: Any, env: Optional[Env] = None
     ) -> None:
         self._package = package
         self._pool = pool
@@ -117,14 +116,14 @@ class Provider:
         self._installed_python_constraint = original_installed_python_constraint
 
     def search_for(
-        self,
-        dependency: Union[
-            Dependency,
-            VCSDependency,
-            FileDependency,
-            DirectoryDependency,
-            URLDependency,
-        ],
+            self,
+            dependency: Union[
+                Dependency,
+                VCSDependency,
+                FileDependency,
+                DirectoryDependency,
+                URLDependency,
+            ],
     ) -> List[DependencyPackage]:
         """
         Search for the specifications that match the given dependency.
@@ -140,9 +139,9 @@ class Provider:
 
         for constraint in search_for:
             if (
-                constraint.is_same_package_as(dependency)
-                and constraint.constraint.intersect(dependency.constraint)
-                == dependency.constraint
+                    constraint.is_same_package_as(dependency)
+                    and constraint.constraint.intersect(dependency.constraint)
+                    == dependency.constraint
             ):
                 packages = [
                     p
@@ -213,13 +212,13 @@ class Provider:
 
     @classmethod
     def get_package_from_vcs(
-        cls,
-        vcs: str,
-        url: str,
-        branch: Optional[str] = None,
-        tag: Optional[str] = None,
-        rev: Optional[str] = None,
-        name: Optional[str] = None,
+            cls,
+            vcs: str,
+            url: str,
+            branch: Optional[str] = None,
+            tag: Optional[str] = None,
+            rev: Optional[str] = None,
+            name: Optional[str] = None,
     ) -> Package:
         if vcs != "git":
             raise ValueError(f"Unsupported VCS dependency {vcs}")
@@ -310,6 +309,7 @@ class Provider:
             self._deferred_cache[dependency] = (dependency, package)
 
         package.develop = dependency.develop
+        package.source_type = dependency.source_type  # fix to adapt to sibling dependencies behaving like directories
 
         if dependency.base is not None:
             package.root_dir = dependency.base
@@ -318,7 +318,7 @@ class Provider:
 
     @classmethod
     def get_package_from_directory(
-        cls, directory: Path, name: Optional[str] = None
+            cls, directory: Path, name: Optional[str] = None
     ) -> Package:
         package = PackageInfo.from_directory(path=directory).to_package(
             root_dir=directory
@@ -372,14 +372,14 @@ class Provider:
 
             package = cls.get_package_from_file(temp_dir / file_name)
 
-        package._source_type = "url"
+        package.source_type = "url"
         package._source_url = url
 
         return package
 
     def incompatibilities_for(
-        self, package: DependencyPackage,
-        forced_versions: Dict[str, Dependency]
+            self, package: DependencyPackage,
+            forced_versions: Dict[str, Dependency]
     ) -> List[Incompatibility]:
         """
         Returns incompatibilities that encapsulate a given package's dependencies,
@@ -405,13 +405,12 @@ class Provider:
                     )
                 ]
 
-
         _dependencies = [
             forced_versions.get(dep.name, dep)
             for dep in dependencies
             if dep.name not in self.UNSAFE_PACKAGES
-            and self._python_constraint.allows_any(dep.python_constraint)
-            and (not self._env or dep.marker.validate(self._env.marker_env))
+               and self._python_constraint.allows_any(dep.python_constraint)
+               and (not self._env or dep.marker.validate(self._env.marker_env))
         ]
 
         overrides = self._overrides.get(package, {})
@@ -443,6 +442,7 @@ class Provider:
             requires = package.all_requires
         elif not package.is_root() and package.source_type not in {
             "directory",
+            "sibling",
             "file",
             "url",
             "git",
@@ -500,8 +500,8 @@ class Provider:
 
             if not package.is_root():
                 if (dep.is_optional() and dep.name not in optional_dependencies) or (
-                    dep.in_extras
-                    and not set(dep.in_extras).intersection(package.dependency.extras)
+                        dep.in_extras
+                        and not set(dep.in_extras).intersection(package.dependency.extras)
                 ):
                     continue
 
@@ -790,13 +790,13 @@ class Provider:
         if self.is_debugging():
             debug_info = str(message)
             debug_info = (
-                "\n".join(
-                    [
-                        "<debug>{}:</debug> {}".format(str(depth).rjust(4), s)
-                        for s in debug_info.split("\n")
-                    ]
-                )
-                + "\n"
+                    "\n".join(
+                        [
+                            "<debug>{}:</debug> {}".format(str(depth).rjust(4), s)
+                            for s in debug_info.split("\n")
+                        ]
+                    )
+                    + "\n"
             )
 
             self._io.write(debug_info)
@@ -810,8 +810,8 @@ class Provider:
             indicator = Indicator(self._io, "{message} <debug>({elapsed:2s})</debug>")
 
             with indicator.auto(
-                "<info>Resolving dependencies...</info>",
-                "<info>Resolving dependencies...</info>",
+                    "<info>Resolving dependencies...</info>",
+                    "<info>Resolving dependencies...</info>",
             ):
                 yield
 

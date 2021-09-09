@@ -109,7 +109,7 @@ def download_file(
 def get_package_version_display_string(
     package: Package, root: Optional[Path] = None
 ) -> str:
-    if package.source_type in ["file", "directory"] and root:
+    if package.source_type in ["file", "directory", "sibling"] and root:
         return "{} {}".format(
             package.version,
             Path(os.path.relpath(package.source_url, root.as_posix())).as_posix(),

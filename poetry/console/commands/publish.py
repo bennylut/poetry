@@ -47,7 +47,7 @@ the config command.
         from poetry.publishing.publisher import Publisher
 
         cred_completer = _CredentialCompleter().complete if self.poetry.pyproject.is_parent() else None
-        for poetry in self.poetry.all_sub_poetries():
+        for poetry in self.poetry.all_project_poetries():
 
             publisher = Publisher(poetry, self.io, user_credential_completer=cred_completer)
 

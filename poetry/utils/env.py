@@ -430,8 +430,6 @@ class EnvManager:
     ENVS_FILE = "envs.toml"
 
     def __init__(self, poetry: "Poetry") -> None:
-        if poetry.pyproject.is_parent():
-            raise ValueError("could not manage environment of a parent project")
 
         self._poetry = poetry
 
@@ -556,7 +554,7 @@ class EnvManager:
 
                 envs_file.write(envs)
 
-    def get(self, reload: bool = False) -> Union["VirtualEnv", "SystemEnv"]:
+    def get(self, reload: bool = False, ignore_activated_env: bool = False) -> Union["VirtualEnv", "SystemEnv"]:
         if self._env is not None and not reload:
             return self._env
 
@@ -587,7 +585,7 @@ class EnvManager:
         # most users have it activated all the time.
         in_venv = env_prefix is not None and conda_env_name != "base"
 
-        if not in_venv or env is not None:
+        if ignore_activated_env or not in_venv or env is not None:
             # Checking if a local virtualenv exists
             if self._poetry.config.get("virtualenvs.in-project") is not False:
                 if (cwd / ".venv").exists() and (cwd / ".venv").is_dir():
@@ -745,12 +743,13 @@ class EnvManager:
             name: Optional[str] = None,
             executable: Optional[str] = None,
             force: bool = False,
+            ignore_activated_env: bool = False
     ) -> Union["SystemEnv", "VirtualEnv"]:
         if self._env is not None and not force:
             return self._env
 
         cwd = self._poetry.file.parent
-        env = self.get(reload=True)
+        env = self.get(reload=True, ignore_activated_env=ignore_activated_env)
 
         if not env.is_sane():
             force = True

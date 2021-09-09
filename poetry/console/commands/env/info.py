@@ -18,9 +18,6 @@ class EnvInfoCommand(Command):
     options = [option("path", "p", "Only display the environment's path.")]
 
     def handle(self) -> Optional[int]:
-        if self.poetry.pyproject.is_parent():
-            console.println(f"No virtual environments can be managed for parent projects.")
-            return 1
 
         from poetry.utils.env import EnvManager
 

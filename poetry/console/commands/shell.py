@@ -18,9 +18,6 @@ If one doesn't exist yet, it will be created.
 """
 
     def handle(self) -> None:
-        if self.poetry.pyproject.is_parent():
-            console.println("This command is not applicable for parent projects")
-            return 1
 
         from poetry.utils.shell import Shell
 

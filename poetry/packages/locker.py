@@ -120,7 +120,7 @@ class Locker:
             source = info.get("source", {})
             source_type = source.get("type")
             url = source.get("url")
-            if source_type in ["directory", "file"]:
+            if source_type in ["directory", "file", "sibling"]:
                 url = self._lock.path.parent.joinpath(url).resolve().as_posix()
 
             package = Package(
@@ -184,7 +184,7 @@ class Locker:
             for dep_name, constraint in info.get("dependencies", {}).items():
 
                 root_dir = self._lock.path.parent
-                if package.source_type == "directory":
+                if package.source_type in ["directory", "sibling"]:
                     # root dir should be the source of the package relative to the lock path
                     root_dir = Path(package.source_url)
 
@@ -599,7 +599,7 @@ class Locker:
 
         if package.source_url:
             url = package.source_url
-            if package.source_type in ["file", "directory"]:
+            if package.source_type in ["file", "directory", "sibling"]:
                 # The lock file should only store paths relative to the root project
                 url = Path(
                     os.path.relpath(
@@ -620,7 +620,7 @@ class Locker:
             if package.source_resolved_reference:
                 data["source"]["resolved_reference"] = package.source_resolved_reference
 
-            if package.source_type in ["directory", "git"]:
+            if package.source_type in ["directory", "sibling", "git"]:
                 data["develop"] = package.develop
 
         return data
