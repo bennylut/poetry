@@ -31,7 +31,7 @@ class UpdateCommand(InstallerCommand):
     def handle(self) -> int:
         packages = self.argument("packages")
 
-        for poetry in self.poetry.all_project_poetries():
+        for poetry in self.poetry.sub_projects():
             if poetry.env is None:
                 continue
 

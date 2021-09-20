@@ -4,11 +4,10 @@ from pathlib import Path
 
 import pytest
 
-
 try:
     import urllib.parse as urlparse
 except ImportError:
-    import urlparse
+    import urlparse  # noqa
 
 
 def mock_clone(self, source, dest):

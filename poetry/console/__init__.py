@@ -10,11 +10,11 @@ from cleo.io.outputs.stream_output import StreamOutput
 
 class Console:
     def __init__(self, io: Optional[IO] = None):
+
         if io is None:
-            io = IO(
-                ArgvInput(sys.argv),
-                StreamOutput(sys.stdout),
-                StreamOutput(sys.stderr))
+            input = ArgvInput()
+            input.set_stream(sys.stdin)
+            io = IO(input, StreamOutput(sys.stdout), StreamOutput(sys.stderr))
 
         self.set_io(io)
 

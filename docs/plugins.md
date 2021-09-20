@@ -61,18 +61,18 @@ Example:
 from cleo.io.io import IO
 
 from poetry.plugins.plugin import Plugin
-from poetry.poetry import Poetry
+from poetry.managed_project import ManagedProject
 
 
 class MyPlugin(Plugin):
 
-    def activate(self, poetry: Poetry, io: IO):
-        version = self.get_custom_version()
-        io.write_line(f"Setting package version to <b>{version}</b>")
-        poetry.package.set_version(version)
+  def activate(self, poetry: ManagedProject, io: IO):
+    version = self.get_custom_version()
+    io.write_line(f"Setting package version to <b>{version}</b>")
+    poetry.package.set_version(version)
 
-    def get_custom_version(self) -> str:
-        ...
+  def get_custom_version(self) -> str:
+    ...
 ```
 
 ### Application plugins

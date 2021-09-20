@@ -17,7 +17,7 @@ if TYPE_CHECKING:
     from cleo.io import BufferedIO
     from cleo.io import ConsoleIO
 
-    from ..poetry import Poetry
+    from ..managed_project import ManagedProject
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +27,7 @@ class Publisher:
     Registers and publishes packages to remote repositories.
     """
 
-    def __init__(self, poetry: "Poetry", io: Union["BufferedIO", "ConsoleIO"],
+    def __init__(self, poetry: "ManagedProject", io: Union["BufferedIO", "ConsoleIO"],
                  user_credential_completer: Optional[Callable[[str, str], Tuple[str, str]]] = None) -> None:
         self._poetry = poetry
         self._package = poetry.package

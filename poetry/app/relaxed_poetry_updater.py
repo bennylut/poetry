@@ -1,28 +1,27 @@
 import shutil
 from functools import cmp_to_key
 from pathlib import Path
-from typing import  Optional
+from typing import TYPE_CHECKING, Optional
 import os
 import site
 
-from poetry.core.packages.package import Package
-
-from poetry.__version__ import __version__
 from poetry.core.packages.dependency import Dependency
-from poetry.core.semver.version import Version
+from poetry.core.packages.package import Package
+from poetry.core.utils.props_ext import cached_property
 
 from poetry.console import console
 from poetry.console.exceptions import PoetrySimpleConsoleException
 from poetry.repositories.installed_repository import InstalledRepository
 from poetry.repositories.pool import Pool
 from poetry.repositories.pypi_repository import PyPiRepository
-from poetry.core.utils.props_ext import cached_property
+
+if TYPE_CHECKING:
+    from poetry.app.relaxed_poetry import RelaxedPoetry
 
 
-class RpInstallation:
-    def __init__(self):
-        self._version = Version.parse(__version__)
-        self._data_dir = None
+class RelaxedPoetryUpdater:
+    def __init__(self, rp: "RelaxedPoetry"):
+        self._rp = rp
 
     @cached_property
     def _installation_env(self):
@@ -36,15 +35,7 @@ class RpInstallation:
         return pool
 
     @cached_property
-    def data_dir(self) -> Path:
-        from poetry.locations import data_dir
-        return data_dir()
-
-    @cached_property
     def bin_dir(self) -> Path:
-        if self._data_dir is not None:
-            return self._data_dir
-
         from poetry.utils._compat import WINDOWS
 
         if os.getenv("RP_HOME"):
@@ -57,9 +48,7 @@ class RpInstallation:
         else:
             bin_dir = os.path.join(user_base, "bin")
 
-        self._bin_dir = Path(bin_dir)
-
-        return self._bin_dir
+        return Path(bin_dir)
 
     @cached_property
     def _installed_repository(self) -> InstalledRepository:
@@ -72,14 +61,14 @@ class RpInstallation:
 
         # We can't use is_relative_to() since it's only available in Python 3.9+
         try:
-            env.path.relative_to(self.data_dir)
+            env.path.relative_to(self._rp.installation_dir())
             return True
         except ValueError:
             return False
 
     def _find_update_version(self, version: Optional[str]) -> Optional[Package]:
         if not version:
-            version = ">=" + __version__
+            version = ">=" + self._rp.version
 
         console.println(f"Attempting to find update version with constraint: {version}")
         repo = self._pool.repositories[0]
@@ -100,7 +89,7 @@ class RpInstallation:
 
         return packages[0] if len(packages) > 0 else None
 
-    def update(self, version: Optional[str]) -> bool:
+    def update(self, version: Optional[str], dry_run: bool) -> bool:
         if not self.is_installed_using_recommended_installer():
             raise PoetrySimpleConsoleException(
                 "Poetry was not installed with the recommended installer, "
@@ -116,7 +105,7 @@ class RpInstallation:
         console.println(f"Updating <c1>Relaxed-Poetry</c1> to <c2>{release.version}</c2>")
         console.println()
 
-        self.add_packages(f"relaxed-poetry {release}")
+        self.add_packages(f"relaxed-poetry {release}", dry_run=dry_run)
         self._make_bin()
 
         console.println(f"<c1>Relaxed-Poetry</c1> (<c2>{release.version}</c2>) is installed now. Great!")
@@ -143,16 +132,16 @@ class RpInstallation:
 
         try:
             self.bin_dir.joinpath(script).symlink_to(
-                self.data_dir.joinpath(target_script)
+                self._rp.installation_dir().joinpath(target_script)
             )
         except OSError:
             # This can happen if the user
             # does not have the correct permission on Windows
             shutil.copy(
-                self.data_dir.joinpath(target_script), self.bin_dir.joinpath(script)
+                self._rp.installation_dir().joinpath(target_script), self.bin_dir.joinpath(script)
             )
 
-    def add_packages(self, *packages: str, dry_run: bool = False):
+    def add_packages(self, *packages: str, dry_run: bool):
         from poetry.config.config import Config
         from poetry.core.packages.dependency import Dependency
         from poetry.core.packages.project_package import ProjectPackage
@@ -172,7 +161,7 @@ class RpInstallation:
             console.io,
             env,
             root,
-            NullLocker(self.data_dir.joinpath("poetry.lock"), {}),
+            NullLocker(self._rp.installation_dir().joinpath("poetry.lock"), {}),
             self._pool,
             Config(),
             installed=installed,
@@ -185,16 +174,3 @@ class RpInstallation:
     def has_package(self, package: str, constraint: str = "*") -> bool:
         ir: InstalledRepository = self._installed_repository
         return len(ir.find_packages(Dependency(package, constraint))) > 0
-
-    def resources(self):
-        try:
-            import importlib.resources as pkg_resources
-        except ImportError:
-            # Try backported to PY<37 `importlib_resources`.
-            import importlib_resources as pkg_resources
-
-        import poetry.resources as resources
-        print(pkg_resources.files(resources))
-
-installation = RpInstallation()
-

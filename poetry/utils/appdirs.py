@@ -192,6 +192,7 @@ def _get_win_folder_from_registry(csidl_name: str) -> str:
     registry for this guarantees us the correct answer for all CSIDL_*
     names.
     """
+    # noinspection PyUnresolvedReferences
     import _winreg
 
     shell_folder_name = {

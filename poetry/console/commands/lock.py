@@ -33,7 +33,7 @@ file.
 
     def handle(self) -> int:
 
-        for poetry in self.poetry.all_project_poetries():
+        for poetry in self.poetry.sub_projects():
             if poetry.env is None:
                 continue
 

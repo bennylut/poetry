@@ -10,7 +10,7 @@ from poetry.packages.project_package import ProjectPackage
 from poetry.plugins import ApplicationPlugin
 from poetry.plugins import Plugin
 from poetry.plugins.plugin_manager import PluginManager
-from poetry.poetry import Poetry
+from poetry.managed_project import ManagedProject
 
 
 CWD = Path(__file__).parent.parent / "fixtures" / "simple_project"
@@ -36,7 +36,7 @@ class InvalidPlugin:
 
 @pytest.fixture()
 def poetry(tmp_dir, config):
-    poetry = Poetry(
+    poetry = ManagedProject(
         CWD / "pyproject.toml",
         {},
         ProjectPackage("simple-project", "1.2.3"),

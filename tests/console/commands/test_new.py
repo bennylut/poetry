@@ -4,7 +4,7 @@ from typing import Optional
 import pytest
 
 from poetry.factory import Factory
-from poetry.poetry import Poetry
+from poetry.managed_project import ManagedProject
 
 
 @pytest.fixture
@@ -14,7 +14,7 @@ def tester(command_tester_factory):
 
 def verify_project_directory(
     path: Path, package_name: str, package_path: str, include_from: Optional[str] = None
-) -> Poetry:
+) -> ManagedProject:
     package_path = Path(package_path)
     assert path.is_dir()
 

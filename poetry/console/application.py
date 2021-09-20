@@ -14,15 +14,14 @@ from cleo.events.console_command_event import ConsoleCommandEvent
 from cleo.events.console_events import COMMAND
 from cleo.events.event_dispatcher import EventDispatcher
 from cleo.exceptions import CleoException
-from cleo.formatters.style import Style
 from cleo.io.inputs.argv_input import ArgvInput
 from cleo.io.inputs.input import Input
 from cleo.io.inputs.option import Option
 from cleo.io.io import IO
 from cleo.io.outputs.output import Output
-from poetry.core.pyproject.profiles import ProfilesActivationData
 
 from poetry.__version__ import __version__
+from poetry.app.relaxed_poetry import rp
 from poetry.console import console
 
 from .command_loader import CommandLoader
@@ -94,19 +93,19 @@ if TYPE_CHECKING:
     from cleo.io.inputs.definition import Definition
 
     from poetry.console.commands.installer_command import InstallerCommand
-    from poetry.poetry import Poetry
+    from poetry.managed_project import ManagedProject
 
 
 class Application(BaseApplication):
     def __init__(self) -> None:
         super().__init__("relaxed-poetry", __version__)
 
-        self._poetry = None
         self._io: Optional[IO] = None
         self.disable_plugins = False
         self._plugins_loaded = False
 
         dispatcher = EventDispatcher()
+        dispatcher.add_listener(COMMAND, self.activate_relaxed_poetry)
         dispatcher.add_listener(COMMAND, self.register_command_loggers)
         dispatcher.add_listener(COMMAND, self.configure_env)
         dispatcher.add_listener(COMMAND, self.configure_installer)
@@ -120,30 +119,21 @@ class Application(BaseApplication):
             description="resolve pyproject using the given comma separated list of profile names.",
             flag=False))
 
-    @property
-    def poetry(self) -> "Poetry":
+    def activate_relaxed_poetry(self, *args) -> None:
         from pathlib import Path
+        rp.activate_project(Path.cwd(), self._running_command.name, self.disable_plugins)
 
-        from poetry.factory import Factory
-
-        if self._poetry is not None:
-            return self._poetry
-
-        manual_profiles = [s for s in (self._io.input.option("profiles") or "").split(",") if len(s) > 0]
-        profile_activation = ProfilesActivationData(manual_profiles, self._running_command.name)
-
-        self._poetry = Factory().create_poetry(
-            Path.cwd(), io=self._io, disable_plugins=self.disable_plugins, profiles=profile_activation
-        )
-
-        return self._poetry
+    @property
+    def poetry(self) -> "ManagedProject":
+        """@deprecated - use rp.active_project instead"""
+        return rp.active_project
 
     @property
     def command_loader(self) -> CommandLoader:
         return self._command_loader
 
     def reset_poetry(self) -> None:
-        self._poetry = None
+        self.activate_relaxed_poetry()
 
     def create_io(
             self,
@@ -229,6 +219,7 @@ class Application(BaseApplication):
             "poetry.utils.password_manager",
         ]
 
+        # noinspection PyUnresolvedReferences
         loggers += command.loggers
 
         handler = IOHandler(io)

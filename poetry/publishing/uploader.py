@@ -31,7 +31,7 @@ from poetry.utils.patterns import wheel_file_re
 if TYPE_CHECKING:
     from cleo.io.null_io import NullIO
 
-    from poetry.poetry import Poetry
+    from poetry.managed_project import ManagedProject
 
 _has_blake2 = hasattr(hashlib, "blake2b")
 
@@ -53,7 +53,7 @@ class UploadError(Exception):
 
 
 class Uploader:
-    def __init__(self, poetry: "Poetry", io: "NullIO") -> None:
+    def __init__(self, poetry: "ManagedProject", io: "NullIO") -> None:
         self._poetry = poetry
         self._package = poetry.package
         self._io = io

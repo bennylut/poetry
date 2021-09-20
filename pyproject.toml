@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "relaxed-poetry"
-version = "0.2.4"
+version = "0.3.0"
 description = "Fork of Poetry (Python dependency management and packaging tool), attempts to be faster and less strict."
 authors = [
     "bennylut"
@@ -33,7 +33,8 @@ classifiers = [
 generate-setup-file = false
 
 [tool.relaxed-poetry.properties]
-relaxed-poetry-core-dep = "^0.1.1"
+relaxed-poetry-core-dep = ">=0.2.0"
+protopy-lib-dep=">=0.2.0"
 
 # Requirements
 
@@ -59,6 +60,7 @@ keyring = ">=21.2.0"
 entrypoints = "^0.3"
 importlib-metadata = {version = "^1.6.0", python = "<3.8"}
 dataclasses = {version = "^0.8", python = "~3.6"}
+protopy-lib = "$protopy-lib-dep"
 
 
 [tool.poetry.dev-dependencies]

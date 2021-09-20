@@ -19,7 +19,7 @@ from subprocess import CalledProcessError
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from poetry.poetry import Poetry
+    from poetry.managed_project import ManagedProject
 
 from typing import Any
 from typing import ContextManager
@@ -461,7 +461,7 @@ class EnvManager:
 
     ENVS_FILE = "envs.toml"
 
-    def __init__(self, poetry: "Poetry") -> None:
+    def __init__(self, poetry: "ManagedProject") -> None:
 
         self._poetry = poetry
 

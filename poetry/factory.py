@@ -21,7 +21,7 @@ from .locations import CONFIG_DIR
 from .packages.locker import Locker
 from .packages.project_package import ProjectPackage
 from .plugins.plugin_manager import PluginManager
-from .poetry import Poetry
+from .managed_project import ManagedProject
 from .repositories.pypi_repository import PyPiRepository
 
 if TYPE_CHECKING:
@@ -48,13 +48,13 @@ class Factory(BaseFactory):
             io: Optional[IO] = None,
             disable_plugins: bool = False,
             profiles: Optional[ProfilesActivationData] = None
-    ) -> Poetry:
+    ) -> ManagedProject:
         base_poetry = super(Factory, self).create_poetry(cwd, profiles=profiles)
         return self._upgrade(base_poetry, io, disable_plugins)
 
     def _upgrade(
             self,
-            base_poetry: Poetry,
+            base_poetry: ManagedProject,
             io: Optional[IO] = None,
             disable_plugins: bool = False):
 
@@ -97,7 +97,7 @@ class Factory(BaseFactory):
 
         config.merge({"repositories": repositories})
 
-        poetry = Poetry(
+        poetry = ManagedProject(
             base_poetry.file.path,
             base_poetry.pyproject,
             base_poetry.package,
@@ -160,7 +160,7 @@ class Factory(BaseFactory):
 
     @classmethod
     def configure_sources(
-            cls, poetry: "Poetry", sources: List[Dict[str, str]], config: "Config", io: "IO"
+            cls, poetry: "ManagedProject", sources: List[Dict[str, str]], config: "Config", io: "IO"
     ) -> None:
         for source in sources:
             repository = cls.create_legacy_repository(source, config)

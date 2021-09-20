@@ -1,12 +1,11 @@
 from cleo.helpers import argument
 from cleo.helpers import option
 
-
+from poetry.app.relaxed_poetry import rp
 from ..command import Command
 
 
 class SelfUpdateCommand(Command):
-
     name = "self update"
     description = "Updates Relaxed-Poetry to the latest version."
 
@@ -21,6 +20,5 @@ class SelfUpdateCommand(Command):
     ]
 
     def handle(self) -> int:
-        from poetry.rp_installation import installation
-        installation.update(self.option("dry-run"))
+        rp.update_installation(self.argument("version"), self.option("dry-run"))
         return 0

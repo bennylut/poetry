@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from .utils.env import Env
 
 
-class Poetry(BasePoetry):
+class ManagedProject(BasePoetry):
     VERSION = __version__
 
     def __init__(
@@ -36,12 +36,16 @@ class Poetry(BasePoetry):
     ):
         from .repositories.pool import Pool  # noqa
 
-        super(Poetry, self).__init__(file, pyproject, package)
+        super(ManagedProject, self).__init__(file, pyproject, package)
 
         self._locker = locker
         self._config = config
         self._pool = Pool()
         self._plugin_manager: Optional["PluginManager"] = None
+
+    @property
+    def path(self) -> Path:
+        return self.pyproject.path.parent
 
     @property
     def locker(self) -> "Locker":
@@ -86,22 +90,22 @@ class Poetry(BasePoetry):
         installer.use_executor(self.config.get("experimental.new-installer", False))
         return installer
 
-    def set_locker(self, locker: "Locker") -> "Poetry":
+    def set_locker(self, locker: "Locker") -> "ManagedProject":
         self._locker = locker
 
         return self
 
-    def set_pool(self, pool: "Pool") -> "Poetry":
+    def set_pool(self, pool: "Pool") -> "ManagedProject":
         self._pool = pool
 
         return self
 
-    def set_config(self, config: "Config") -> "Poetry":
+    def set_config(self, config: "Config") -> "ManagedProject":
         self._config = config
 
         return self
 
-    def set_plugin_manager(self, plugin_manager: "PluginManager") -> "Poetry":
+    def set_plugin_manager(self, plugin_manager: "PluginManager") -> "ManagedProject":
         self._plugin_manager = plugin_manager
 
         return self
@@ -112,14 +116,21 @@ class Poetry(BasePoetry):
             for source in self.pyproject.poetry_config.get("source", [])
         ]
 
-    def all_project_poetries(self) -> Iterator["Poetry"]:
+    def _load_related_project(self, pyprj: PyProject) -> "ManagedProject":
         from poetry.factory import Factory
-        if self.pyproject.is_parent():
-            plugins_disabled = self._plugin_manager.is_plugins_disabled() if self._plugin_manager else True
+        plugins_disabled = self._plugin_manager.is_plugins_disabled() if self._plugin_manager else True
+        return Factory().create_poetry_for_pyproject(pyprj, disable_plugins=plugins_disabled)
 
+    def sub_projects(self) -> Iterator["ManagedProject"]:
+        if self.pyproject.is_parent():
             for subproject in self.pyproject.sub_projects.values():
-                subpoetry = Factory().create_poetry_for_pyproject(subproject, disable_plugins=plugins_disabled)
-                # subpoetry.package.develop = True
-                yield from subpoetry.all_project_poetries()
+                yield from self._load_related_project(subproject).sub_projects()
 
         yield self
+
+    @cached_property
+    def parent(self) -> Optional["ManagedProject"]:
+        parent = self.pyproject.parent
+        if parent:
+            return self._load_related_project(parent)
+        return None

@@ -3,7 +3,7 @@ from poetry.core.pyproject.toml import PyProject
 from poetry.core.version.helpers import format_python_constraint
 
 from .env_command import EnvCommand
-from ...poetry import Poetry
+from ...managed_project import ManagedProject
 from poetry.core.masonry.builder import Builder
 from poetry.utils.env import EnvManager
 
@@ -29,10 +29,10 @@ class BuildCommand(EnvCommand):
         if self.option("format"):
             fmt = self.option("format")
 
-        for poetry in self.poetry.all_project_poetries():
+        for poetry in self.poetry.sub_projects():
             self._build(fmt, poetry)
 
-    def _build(self, fmt: str, poetry: Poetry):
+    def _build(self, fmt: str, poetry: ManagedProject):
         if poetry.env is None:
             return
 

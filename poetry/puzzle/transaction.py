@@ -5,6 +5,8 @@ from typing import Tuple
 
 from poetry.core.semver.version_constraint import VersionConstraint
 
+from poetry.console import console
+
 if TYPE_CHECKING:
     from poetry.core.packages.package import Package
     from poetry.installation.operations import OperationTypes
@@ -117,5 +119,9 @@ class Transaction:
         bounds = base_bounds
         ops = self.calculate_operations(with_uninstalls=False)
         for op in ops:
-            bounds = bounds.intersect(op.package.python_constraint)
+            if not op.package.python_constraint:
+                old_bounds = bounds
+                bounds = bounds.intersect(op.package.python_constraint)
+                if old_bounds != bounds:
+                    console.println(f"  - Python bounds changed because of package <c1>{op.package.name}</c1> from <c2>{old_bounds}</c2> to <c2>{bounds}</>")
         return bounds

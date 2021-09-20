@@ -50,6 +50,7 @@ except ImportError:
     try:
         from html.parser import HTMLParser
     except ImportError:
+        # noinspection PyUnresolvedReferences
         from HTMLParser import HTMLParser
 
     unescape = HTMLParser().unescape
@@ -58,6 +59,7 @@ except ImportError:
 try:
     from urllib.parse import quote
 except ImportError:
+    # noinspection PyUnresolvedReferences
     from urllib import quote
 
 

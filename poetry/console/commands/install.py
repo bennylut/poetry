@@ -147,7 +147,7 @@ dependencies and not including the current project, run the command with the
 
             with_synchronization = True
 
-        for poetry in self.poetry.all_project_poetries():
+        for poetry in self.poetry.sub_projects():
             installer = poetry.installer
             if not installer:
                 continue

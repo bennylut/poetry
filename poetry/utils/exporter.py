@@ -8,7 +8,7 @@ from typing import Union
 from cleo.io.io import IO
 
 from poetry.core.packages.utils.utils import path_to_url
-from poetry.poetry import Poetry
+from poetry.managed_project import ManagedProject
 from poetry.utils._compat import decode
 
 
@@ -22,7 +22,7 @@ class Exporter:
     ACCEPTED_FORMATS = (FORMAT_REQUIREMENTS_TXT,)
     ALLOWED_HASH_ALGORITHMS = ("sha256", "sha384", "sha512")
 
-    def __init__(self, poetry: Poetry) -> None:
+    def __init__(self, poetry: ManagedProject) -> None:
         self._poetry = poetry
 
     def export(

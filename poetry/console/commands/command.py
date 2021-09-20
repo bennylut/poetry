@@ -3,25 +3,25 @@ from typing import Optional
 
 from cleo.commands.command import Command as BaseCommand
 
+from poetry.app.relaxed_poetry import rp
 
 if TYPE_CHECKING:
     from poetry.console.application import Application
-    from poetry.poetry import Poetry
+    from poetry.managed_project import ManagedProject
 
 
 class Command(BaseCommand):
     loggers = []
 
-    _poetry: Optional["Poetry"] = None
+    _poetry: Optional["ManagedProject"] = None
 
     @property
-    def poetry(self) -> "Poetry":
+    def poetry(self) -> "ManagedProject":
         if self._poetry is None:
-            self._poetry = self.get_application().poetry
-
+            return rp.active_project
         return self._poetry
 
-    def set_poetry(self, poetry: "Poetry") -> None:
+    def set_poetry(self, poetry: "ManagedProject") -> None:
         self._poetry = poetry
 
     def get_application(self) -> "Application":
