@@ -9,12 +9,12 @@ Poetry is a great tool and was a perfect fit for my team. Over the time, we foun
 Since, in my eyes, there is no real alternative to poetry, I choose to fork it and include some relaxations for the issues that we encounter. While I'm at it, I also modified some of poetry's behavior and added some features that suite our workflows and views better.
 
 All of the changes that were made in this fork are documented in the wiki, the followings are some notable ones:
-- Forced dependency versions 
+- Forced dependency versions
 - Relaxation of version-enforcements
 - Faster dependency-versions resolution (~4 times faster on tested projects)
-- Multi-package projects support  
-- `virtualenvs.in-project` is true by default
-- new configuration: `virtualenvs.symlinks-on-path-deps` similar to `flit install --symlink`
+- Multi-package proje~~~~cts support  
+- virtual environments are built inside the project directory by default
+- Project and other components scaffolding using [protopy](https://github.com/bennylut/protopy)
 - property definition and substitution in pyproject 
 - automatic and manual build profiles (override groups of properties in pyproject)
  
