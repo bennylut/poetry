@@ -103,7 +103,7 @@ lists all packages available."""
         only_groups = []
         if self.option("no-dev"):
             self.line(
-                "<warning>The `<fg=yellow;options=bold>--no-dev</>` option is deprecated,"
+                "<warning>The `<fg=yellow;options=bold>--no-dev</>` option is deprecated, "
                 "use the `<fg=yellow;options=bold>--without dev</>` notation instead.</warning>"
             )
             excluded_groups.append("dev")
@@ -187,6 +187,13 @@ lists all packages available."""
 
                 return 0
 
+            required_by = {}
+            for locked in locked_packages:
+                dependencies = {d.name: d.pretty_constraint for d in locked.requires}
+
+                if pkg.name in dependencies:
+                    required_by[locked.pretty_name] = dependencies[pkg.name]
+
             rows = [
                 ["<info>name</>", " : <c1>{}</>".format(pkg.pretty_name)],
                 ["<info>version</>", " : <b>{}</b>".format(pkg.pretty_version)],
@@ -204,6 +211,14 @@ lists all packages available."""
                         " - <c1>{}</c1> <b>{}</b>".format(
                             dependency.pretty_name, dependency.pretty_constraint
                         )
+                    )
+
+            if required_by:
+                self.line("")
+                self.line("<info>required by</info>")
+                for parent, requires_version in required_by.items():
+                    self.line(
+                        " - <c1>{}</c1> <b>{}</b>".format(parent, requires_version)
                     )
 
             return 0

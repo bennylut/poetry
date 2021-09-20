@@ -433,7 +433,7 @@ class Installer:
             self.install(version)
         except subprocess.CalledProcessError as e:
             print(
-                colorize("error", f"\nAn error has occurred: {e}\n{e.stderr.decode()}")
+                colorize("error", f"\nAn error has occurred: {e}\n{e.stdout.decode()}")
             )
 
             return e.returncode

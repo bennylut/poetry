@@ -186,7 +186,7 @@ poetry install --extras "mysql pgsql"
 poetry install -E mysql -E pgsql
 ```
 
-By default `poetry` will install your project's package everytime you run `install`:
+By default `poetry` will install your project's package every time you run `install`:
 
 ```bash
 $ poetry install
@@ -407,10 +407,13 @@ name        : pendulum
 version     : 1.4.2
 description : Python datetimes made easy
 
-dependencies:
+dependencies
  - python-dateutil >=2.6.1
  - tzlocal >=1.4
  - pytzdata >=2017.2.2
+
+required by
+ - calendar >=1.4.0
 ```
 
 ### Options
