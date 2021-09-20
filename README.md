@@ -12,7 +12,7 @@ All of the changes that were made in this fork are documented in the wiki, the f
 - Forced dependency versions
 - Relaxation of version-enforcements
 - Faster dependency-versions resolution (~4 times faster on tested projects)
-- Multi-package proje~~~~cts support  
+- Multi-package projects support  
 - virtual environments are built inside the project directory by default
 - Project and other components scaffolding using [protopy](https://github.com/bennylut/protopy)
 - property definition and substitution in pyproject 
