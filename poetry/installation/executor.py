@@ -23,6 +23,8 @@ from poetry.utils._compat import decode
 from poetry.utils.env import EnvCommandError
 from poetry.utils.helpers import safe_rmtree
 from poetry.utils.pip import pip_editable_install
+from ..console import console
+from ..managed_project import ManagedProject
 
 from ..utils.authenticator import Authenticator
 from ..utils.pip import pip_install
@@ -47,23 +49,20 @@ if TYPE_CHECKING:
 class Executor:
     def __init__(
             self,
-            env: "Env",
-            pool: "Pool",
-            config: "Config",
-            io: "IO",
+            project: ManagedProject,
             parallel: bool = None,
     ) -> None:
-        self._env = env
-        self._io = io
+        self._project = project
+        self._env = project.env
         self._dry_run = False
         self._enabled = True
         self._verbose = False
-        self._authenticator = Authenticator(config, self._io)
-        self._chef = Chef(config, self._env)
-        self._chooser = Chooser(pool, self._env)
+        # self._authenticator = Authenticator(config, self._io)
+        # self._chef = Chef(config, self._env)
+        self._chooser = Chooser(project.pool, self._env)
 
         if parallel is None:
-            parallel = config.get("installer.parallel", True)
+            parallel = project.config.get("installer.parallel", True)
 
         if parallel:
             # This should be directly handled by ThreadPoolExecutor
@@ -86,7 +85,7 @@ class Executor:
         self._lock = threading.Lock()
         self._shutdown = False
         self._hashes: Dict[str, str] = {}
-        self._config = config
+        self._config = project.config
 
     @property
     def installations_count(self) -> int:
@@ -101,7 +100,7 @@ class Executor:
         return self._executed["uninstall"]
 
     def supports_fancy_output(self) -> bool:
-        return self._io.output.is_decorated() and not self._dry_run
+        return console.io.output.is_decorated() and not self._dry_run
 
     def disable(self) -> "Executor":
         self._enabled = False
@@ -540,7 +539,7 @@ class Executor:
         if not Path(package.source_url).is_absolute() and package.root_dir:
             archive = package.root_dir / archive
 
-        archive = self._chef.prepare(archive)
+        # archive = self._chef.prepare(archive)
 
         return archive
 
@@ -648,93 +647,106 @@ class Executor:
         return self._download_link(operation, link)
 
     def _download_link(self, operation: Union[Install, Update], link: Link) -> Link:
-        package = operation.package
+        from poetry.app.relaxed_poetry import rp
+        archive = rp.artifacts.fetch(
+            self._project, link,
+            self._sections[id(operation)] if self.supports_fancy_output() else console.io,
+            operation.package
+        )
 
-        archive = self._chef.get_cached_archive_for_link(link)
-        if archive is link:
-            # No cached distributions was found, so we download and prepare it
-            try:
-                archive = self._download_archive(operation, link)
-            except BaseException:
-                cache_directory = self._chef.get_cache_directory_for_link(link)
-                cached_file = cache_directory.joinpath(link.filename)
-                # We can't use unlink(missing_ok=True) because it's not available
-                # in pathlib2 for Python 2.7
-                if cached_file.exists():
-                    cached_file.unlink()
+        # archive = self._chef.get_cached_archive_for_link(link)
+        # if archive is link:
+        # No cached distributions was found, so we download and prepare it
+        # try:
+        #     archive = self._download_archive(operation, link)
+        # except BaseException:
+        #     cache_directory = self._chef.get_cache_directory_for_link(link)
+        #     cached_file = cache_directory.joinpath(link.filename)
+        # We can't use unlink(missing_ok=True) because it's not available
+        # in pathlib2 for Python 2.7
+        # if cached_file.exists():
+        #     cached_file.unlink()
+        #
+        # raise
 
-                raise
+        # TODO: Check readability of the created archive
 
-            # TODO: Check readability of the created archive
+        # if not link.is_wheel:
+        #     archive = self._chef.prepare(archive)
 
-            if not link.is_wheel:
-                archive = self._chef.prepare(archive)
-
-        if package.files:
-            archive_hash = (
-                    "sha256:"
-                    + FileDependency(
-                package.name,
-                Path(archive.path) if isinstance(archive, Link) else archive,
-            ).hash()
-            )
-            if archive_hash not in {f["hash"] for f in package.files}:
-                raise RuntimeError(
-                    f"Invalid hash for {package} using archive {archive.name}"
-                )
-
-            self._hashes[package.name] = archive_hash
+        # if package.files:
+        #     file_meta = next((meta for meta in package.files if meta.get('name') == link.filename), None)
+        #     if file_meta and file_meta['hash']:
+        #
+        #         archive_hash = (
+        #                 "sha256:"
+        #                 + FileDependency(
+        #             package.name,
+        #             Path(archive.path) if isinstance(archive, Link) else archive,
+        #         ).hash()
+        #         )
+        #         if archive_hash != file_meta['hash']:
+        #             raise RuntimeError(
+        #                 f"Invalid hash for {package} using archive {archive.name}"
+        #             )
+        #
+        #         self._hashes[package.name] = archive_hash
+        #     else:
+        #         console.println(
+        #             f"<warning>Package: {package.name} does not include hash for its archives, "
+        #             "including it can improve security, if you can, "
+        #             "please ask the maintainer of this package to do so.</warning>")
 
         return archive
 
-    def _download_archive(self, operation: Union[Install, Update], link: Link) -> Path:
-        response = self._authenticator.request(
-            "get", link.url, stream=True, io=self._sections.get(id(operation), self._io)
-        )
-        wheel_size = response.headers.get("content-length")
-        operation_message = self.get_operation_message(operation)
-        message = (
-            "  <fg=blue;options=bold>•</> {message}: <info>Downloading...</>".format(
-                message=operation_message,
-            )
-        )
-        progress = None
-        if self.supports_fancy_output():
-            if wheel_size is None:
-                self._write(operation, message)
-            else:
-                from cleo.ui.progress_bar import ProgressBar
-
-                progress = ProgressBar(
-                    self._sections[id(operation)], max=int(wheel_size)
-                )
-                progress.set_format(message + " <b>%percent%%</b>")
-
-        if progress:
-            with self._lock:
-                progress.start()
-
-        done = 0
-        archive = self._chef.get_cache_directory_for_link(link) / link.filename
-        archive.parent.mkdir(parents=True, exist_ok=True)
-        with archive.open("wb") as f:
-            for chunk in response.iter_content(chunk_size=4096):
-                if not chunk:
-                    break
-
-                done += len(chunk)
-
-                if progress:
-                    with self._lock:
-                        progress.set_progress(done)
-
-                f.write(chunk)
-
-        if progress:
-            with self._lock:
-                progress.finish()
-
-        return archive
+    # def _download_archive(self, operation: Union[Install, Update], link: Link) -> Path:
+    #     response = self._authenticator.request(
+    #         "get", link.url, stream=True, io=self._sections.get(id(operation), self._io)
+    #     )
+    #     wheel_size = response.headers.get("content-length")
+    #     operation_message = self.get_operation_message(operation)
+    #     message = (
+    #         "  <fg=blue;options=bold>•</> {message}: <info>Downloading...</>".format(
+    #             message=operation_message,
+    #         )
+    #     )
+    #     progress = None
+    #     if self.supports_fancy_output():
+    #         if wheel_size is None:
+    #             self._write(operation, message)
+    #         else:
+    #             from cleo.ui.progress_bar import ProgressBar
+    #
+    #             progress = ProgressBar(
+    #                 self._sections[id(operation)], max=int(wheel_size)
+    #             )
+    #             progress.set_format(message + " <b>%percent%%</b>")
+    #
+    #     if progress:
+    #         with self._lock:
+    #             progress.start()
+    #
+    #     done = 0
+    #     archive = self._chef.get_cache_directory_for_link(link) / link.filename
+    #     archive.parent.mkdir(parents=True, exist_ok=True)
+    #     with archive.open("wb") as f:
+    #         for chunk in response.iter_content(chunk_size=4096):
+    #             if not chunk:
+    #                 break
+    #
+    #             done += len(chunk)
+    #
+    #             if progress:
+    #                 with self._lock:
+    #                     progress.set_progress(done)
+    #
+    #             f.write(chunk)
+    #
+    #     if progress:
+    #         with self._lock:
+    #             progress.finish()
+    #
+    #     return archive
 
     def _should_write_operation(self, operation: Operation) -> bool:
         return not operation.skipped or self._dry_run or self._verbose

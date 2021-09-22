@@ -8,7 +8,9 @@ from poetry.core.utils.props_ext import cached_property
 
 from poetry.app.relaxed_poetry_updater import RelaxedPoetryUpdater
 from poetry.console import console
+from poetry.locations import CONFIG_DIR
 from poetry.managed_project import ManagedProject
+from poetry.repositories.artifacts import Artifacts
 from poetry.templates.template_executor import TemplateExecutor
 from poetry.utils.appdirs import user_data_dir
 from poetry.__version__ import __version__
@@ -21,6 +23,7 @@ class RelaxedPoetry:
         self._active_project: Optional[ManagedProject] = None
         self._template_executor = TemplateExecutor(self)
         self._updater = RelaxedPoetryUpdater(self)
+        self.artifacts = Artifacts(CONFIG_DIR)
 
     def activate_project(self, path: Path, command: str = "build", plugins_disabled: bool = False):
 
@@ -39,11 +42,8 @@ class RelaxedPoetry:
                 path, io=io, disable_plugins=plugins_disabled, profiles=profile_activation
             )
         except RuntimeError as err:
-            import traceback
-            traceback.print_exc()
-            console.println(f"<info>no project to activate</info>")
-
-            pass
+            if command != "new":
+                raise FileNotFoundError("could not find project to activate") from err
 
     def has_active_project(self) -> bool:
         return self._active_project is not None

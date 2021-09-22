@@ -236,6 +236,7 @@ def _get_win_folder_with_ctypes(csidl_name: str) -> str:
 
 if WINDOWS:
     try:
+        # noinspection PyUnresolvedReferences
         import ctypes
 
         _get_win_folder = _get_win_folder_with_ctypes

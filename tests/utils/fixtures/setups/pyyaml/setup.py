@@ -60,7 +60,9 @@ from distutils.core import setup, Command
 from distutils.core import Distribution as _Distribution
 from distutils.core import Extension as _Extension
 from distutils.dir_util import mkpath
+# noinspection PyUnresolvedReferences
 from distutils.command.build_ext import build_ext as _build_ext
+# noinspection PyUnresolvedReferences
 from distutils.command.bdist_rpm import bdist_rpm as _bdist_rpm
 from distutils.errors import (
     DistutilsError,

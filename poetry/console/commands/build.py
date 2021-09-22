@@ -1,11 +1,9 @@
 from cleo.helpers import option
-from poetry.core.pyproject.toml import PyProject
+from poetry.core.masonry.builder import Builder
 from poetry.core.version.helpers import format_python_constraint
 
 from .env_command import EnvCommand
 from ...managed_project import ManagedProject
-from poetry.core.masonry.builder import Builder
-from poetry.utils.env import EnvManager
 
 
 class BuildCommand(EnvCommand):

@@ -3,7 +3,6 @@ from cleo.helpers import option
 from poetry.utils.exporter import Exporter
 
 from .command import Command
-from .. import console
 
 
 class ExportCommand(Command):

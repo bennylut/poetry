@@ -3,7 +3,8 @@ from typing import List
 from typing import Optional
 
 from .base_repository import BaseRepository
-
+from ..managed_project import ManagedProject
+from ..utils.env import Env
 
 if TYPE_CHECKING:
     from poetry.core.packages.dependency import Dependency
@@ -28,7 +29,7 @@ class Repository(BaseRepository):
         return self._name
 
     def package(
-        self, name: str, version: str, extras: Optional[List[str]] = None
+            self, name: str, version: str, project: ManagedProject, extras: Optional[List[str]] = None
     ) -> "Package":
         name = name.lower()
 
@@ -54,19 +55,19 @@ class Repository(BaseRepository):
         allow_prereleases = dependency.allows_prereleases()
         if isinstance(constraint, VersionRange):
             if (
-                constraint.max is not None
-                and constraint.max.is_unstable()
-                or constraint.min is not None
-                and constraint.min.is_unstable()
+                    constraint.max is not None
+                    and constraint.max.is_unstable()
+                    or constraint.min is not None
+                    and constraint.min.is_unstable()
             ):
                 allow_prereleases = True
 
         for package in self.packages:
             if dependency.name == package.name:
                 if (
-                    package.is_prerelease()
-                    and not allow_prereleases
-                    and not package.source_type
+                        package.is_prerelease()
+                        and not allow_prereleases
+                        and not package.source_type
                 ):
                     # If prereleases are not allowed and the package is a prerelease
                     # and is a standard package then we skip it
@@ -76,8 +77,8 @@ class Repository(BaseRepository):
                     continue
 
                 if constraint.allows(package.version) or (
-                    package.is_prerelease()
-                    and constraint.allows(package.version.next_patch())
+                        package.is_prerelease()
+                        and constraint.allows(package.version.next_patch())
                 ):
                     packages.append(package)
 

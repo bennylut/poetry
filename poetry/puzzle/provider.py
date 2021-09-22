@@ -22,7 +22,6 @@ from poetry.core.packages.directory_dependency import DirectoryDependency
 from poetry.core.packages.file_dependency import FileDependency
 from poetry.core.packages.package import Package
 from poetry.core.packages.url_dependency import URLDependency
-from poetry.core.packages.utils.utils import get_python_constraint_from_marker
 from poetry.core.packages.vcs_dependency import VCSDependency
 from poetry.core.semver.helpers import parse_constraint, VersionTypes
 from poetry.core.semver.version import Version
@@ -62,7 +61,7 @@ class Provider:
     UNSAFE_PACKAGES = set()
 
     def __init__(
-            self, package: Package, pool: Pool, io: Any, env: Optional[Env] = None
+            self, package: Package, pool: Pool, io: Any, env: Env
     ) -> None:
         self._package = package
         self._pool = pool
@@ -452,6 +451,7 @@ class Provider:
                 self._pool.package(
                     package.name,
                     package.version.text,
+                    self._env,
                     extras=list(package.dependency.extras),
                     repository=package.dependency.source_name,
                 ),

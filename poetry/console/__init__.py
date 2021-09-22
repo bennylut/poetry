@@ -16,6 +16,7 @@ class Console:
             input.set_stream(sys.stdin)
             io = IO(input, StreamOutput(sys.stdout), StreamOutput(sys.stderr))
 
+        self.io = None
         self.set_io(io)
 
     def set_io(self, new_io: IO):

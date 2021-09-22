@@ -90,7 +90,7 @@ class Chooser:
 
         links = repository.find_links_for_package(package)
 
-        hashes = [f["hash"] for f in package.files]
+        hashes = {f["hash"] for f in package.files if 'hash' in f}
         if not hashes:
             return links
 

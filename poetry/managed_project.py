@@ -11,7 +11,7 @@ from poetry.core.poetry import Poetry as BasePoetry
 
 from .console import console
 from .installation import Installer
-
+from .utils.authenticator import Authenticator
 
 if TYPE_CHECKING:
     from poetry.core.packages.project_package import ProjectPackage
@@ -71,6 +71,10 @@ class ManagedProject(BasePoetry):
 
         console.println(f"Using virtualenv: <comment>{env.path}</>", "verbose")
         return env
+
+    @cached_property
+    def authenticator(self) -> Authenticator:
+        return Authenticator(self.config, console.io)
 
     @cached_property
     def installer(self) -> Optional["Installer"]:

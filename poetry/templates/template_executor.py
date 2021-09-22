@@ -53,7 +53,7 @@ class TemplateExecutor:
             rp_ctx = _RelaxedPoetryTemplateContext(self._rp)
             self._pengine.render(
                 template, out_path, args,
-                kwargs, {"rp": rp_ctx}, allow_override=allow_override)
+                kwargs, {"rp": rp_ctx}, allow_overwrite=allow_override)
 
     @contextmanager
     def _locate_template(self, descriptor: str) -> ContextManager[Path]:

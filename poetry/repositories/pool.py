@@ -6,7 +6,8 @@ from typing import Optional
 from .base_repository import BaseRepository
 from .exceptions import PackageNotFound
 from .repository import Repository
-
+from ..managed_project import ManagedProject
+from ..utils.env import Env
 
 if TYPE_CHECKING:
     from poetry.core.packages.dependency import Dependency
@@ -122,7 +123,7 @@ class Pool(BaseRepository):
         raise NotImplementedError()
 
     def package(
-        self, name: str, version: str, extras: List[str] = None, repository: str = None
+        self, name: str, version: str, project: ManagedProject, extras: List[str] = None, repository: str = None
     ) -> "Package":
         if repository is not None:
             repository = repository.lower()
@@ -133,18 +134,18 @@ class Pool(BaseRepository):
             and not self._ignore_repository_names
         ):
             if self._parent:
-                return self._parent.package(name, version, extras, repository)
+                return self._parent.package(name, version, project, extras, repository)
             raise ValueError(f'Repository "{repository}" does not exist.')
 
         if repository is not None and not self._ignore_repository_names:
             try:
-                return self.repository(repository).package(name, version, extras=extras)
+                return self.repository(repository).package(name, version, project, extras=extras)
             except PackageNotFound:
                 pass
         else:
             for idx, repo in enumerate(self._repositories):
                 try:
-                    package = repo.package(name, version, extras=extras)
+                    package = repo.package(name, version, project, extras=extras)
                 except PackageNotFound:
                     continue
 
@@ -154,7 +155,7 @@ class Pool(BaseRepository):
                     return package
 
         if self._parent:
-            return self._parent.package(name, version, extras, repository)
+            return self._parent.package(name, version, project, extras, repository)
         raise PackageNotFound(f"Package {name} ({version}) not found.")
 
     def find_packages(self, dependency: "Dependency") -> List["Package"]:

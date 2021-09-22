@@ -16,7 +16,9 @@ from copy import deepcopy
 from pathlib import Path
 from subprocess import CalledProcessError
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Set
+
+from poetry.core.utils.props_ext import cached_property
 
 if TYPE_CHECKING:
     from poetry.managed_project import ManagedProject
@@ -1284,6 +1286,10 @@ class Env:
             self._supported_tags = self.get_supported_tags()
 
         return self._supported_tags
+
+    @cached_property
+    def supported_tags_strset(self) -> Set[str]:
+        return {str(tag) for tag in self.supported_tags}
 
     @classmethod
     def get_base_prefix(cls) -> Path:

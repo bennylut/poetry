@@ -24,7 +24,6 @@ from .operations import Uninstall
 from .operations import Update
 from .operations.operation import Operation
 from .pip_installer import PipInstaller
-from ..console import console
 
 if TYPE_CHECKING:
     from poetry.utils.env import Env

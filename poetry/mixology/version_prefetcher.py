@@ -41,6 +41,7 @@ class VersionPrefetcher:
 
             if version:
                 result = vsolver._provider.complete_package(version)
+                # noinspection PyTypeChecker
                 self._prefetched[str(version.dependency)] = _FakeFuture(result)
                 return result
 

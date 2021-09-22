@@ -36,7 +36,6 @@ from poetry.core.version.requirements import InvalidRequirement
 from poetry.packages import DependencyPackage
 from poetry.utils.extras import get_extra_package_names
 
-
 if TYPE_CHECKING:
     from tomlkit.toml_document import TOMLDocument
 
@@ -44,7 +43,6 @@ logger = logging.getLogger(__name__)
 
 
 class Locker:
-
     _VERSION = "1.1"
 
     _relevant_keys = ["dependencies", "group", "source", "extras"]
@@ -58,7 +56,6 @@ class Locker:
         lock_dir = self._lock.path.parent
         if not lock_dir.exists():
             lock_dir.mkdir(parents=True)
-
 
     @property
     def lock(self) -> TOMLFile:
@@ -93,7 +90,7 @@ class Locker:
         return False
 
     def locked_repository(
-        self, with_dev_reqs: bool = False
+            self, with_dev_reqs: bool = False
     ) -> poetry.repositories.Repository:
         """
         Searches and returns a repository of locked packages.
@@ -143,7 +140,7 @@ class Locker:
                     for h in lock_data["metadata"]["hashes"][info["name"]]
                 ]
             else:
-                package.files = lock_data["metadata"]["files"][info["name"]]
+                package.files = [{k: v for k, v in file.items()} for file in lock_data["metadata"]["files"][info["name"]]]
 
             package.python_versions = info["python-versions"]
             extras = info.get("extras", {})
@@ -209,7 +206,7 @@ class Locker:
 
     @staticmethod
     def __get_locked_package(
-        _dependency: Dependency, packages_by_name: Dict[str, List[Package]]
+            _dependency: Dependency, packages_by_name: Dict[str, List[Package]]
     ) -> Optional[Package]:
         """
         Internal helper to identify corresponding locked package using dependency
@@ -222,13 +219,13 @@ class Locker:
 
     @classmethod
     def __walk_dependency_level(
-        cls,
-        dependencies: List[Dependency],
-        level: int,
-        pinned_versions: bool,
-        packages_by_name: Dict[str, List[Package]],
-        project_level_dependencies: Set[str],
-        nested_dependencies: Dict[Tuple[str, str], Dependency],
+            cls,
+            dependencies: List[Dependency],
+            level: int,
+            pinned_versions: bool,
+            packages_by_name: Dict[str, List[Package]],
+            project_level_dependencies: Set[str],
+            nested_dependencies: Dict[Tuple[str, str], Dependency],
     ) -> Dict[Tuple[str, str], Dependency]:
         if not dependencies:
             return nested_dependencies
@@ -291,11 +288,11 @@ class Locker:
 
     @classmethod
     def get_project_dependencies(
-        cls,
-        project_requires: List[Dependency],
-        locked_packages: List[Package],
-        pinned_versions: bool = False,
-        with_nested: bool = False,
+            cls,
+            project_requires: List[Dependency],
+            locked_packages: List[Package],
+            pinned_versions: bool = False,
+            with_nested: bool = False,
     ) -> Iterable[Dependency]:
         # group packages entries by name, this is required because requirement might use different constraints
         packages_by_name = {}
@@ -350,10 +347,10 @@ class Locker:
         return sorted(nested_dependencies.values(), key=lambda x: x.name.lower())
 
     def get_project_dependency_packages(
-        self,
-        project_requires: List[Dependency],
-        dev: bool = False,
-        extras: Optional[Union[bool, Sequence[str]]] = None,
+            self,
+            project_requires: List[Dependency],
+            dev: bool = False,
+            extras: Optional[Union[bool, Sequence[str]]] = None,
     ) -> Iterator[DependencyPackage]:
         repository = self.locked_repository(with_dev_reqs=dev)
 
@@ -380,7 +377,7 @@ class Locker:
                 continue
 
             if extra_package_names is not None and (
-                package.optional and package.name not in extra_package_names
+                    package.optional and package.name not in extra_package_names
             ):
                 # a package is locked as optional, but is not activated via extras
                 continue
@@ -388,9 +385,9 @@ class Locker:
             selected.append(dependency)
 
         for dependency in self.get_project_dependencies(
-            project_requires=selected,
-            locked_packages=repository.packages,
-            with_nested=True,
+                project_requires=selected,
+                locked_packages=repository.packages,
+                with_nested=True,
         ):
             try:
                 package = repository.find_packages(dependency=dependency)[0]
@@ -413,7 +410,8 @@ class Locker:
             for f in package["files"]:
                 file_metadata = inline_table()
                 for k, v in sorted(f.items()):
-                    file_metadata[k] = v
+                    if v is not None:
+                        file_metadata[k] = v
 
                 files[package["name"]].append(file_metadata)
 
@@ -556,8 +554,8 @@ class Locker:
         # but we want to simplify them if it's possible
         for dependency, constraints in tuple(dependencies.items()):
             if all(
-                len(constraint) == 1 and "version" in constraint
-                for constraint in constraints
+                    len(constraint) == 1 and "version" in constraint
+                    for constraint in constraints
             ):
                 dependencies[dependency] = [
                     constraint["version"] for constraint in constraints

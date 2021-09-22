@@ -35,11 +35,12 @@ from poetry.utils.patterns import wheel_file_re
 
 from ..config.config import Config
 from ..inspection.info import PackageInfo
+from ..managed_project import ManagedProject
 from ..utils.authenticator import Authenticator
 from .exceptions import PackageNotFound
 from .exceptions import RepositoryError
 from .pypi_repository import PyPiRepository
-
+from ..utils.env import Env
 
 if TYPE_CHECKING:
     from poetry.core.packages.dependency import Dependency
@@ -55,13 +56,11 @@ except ImportError:
 
     unescape = HTMLParser().unescape
 
-
 try:
     from urllib.parse import quote
 except ImportError:
     # noinspection PyUnresolvedReferences
     from urllib import quote
-
 
 with warnings.catch_warnings():
     warnings.simplefilter("ignore")
@@ -69,7 +68,6 @@ with warnings.catch_warnings():
 
 
 class Page:
-
     VERSION_REGEX = re.compile(r"(?i)([a-z0-9_\-.]+?)-(?=\d)([a-z0-9_.!+-]+)")
     SUPPORTED_FORMATS = [
         ".tar.gz",
@@ -169,13 +167,13 @@ class Page:
 
 class LegacyRepository(PyPiRepository):
     def __init__(
-        self,
-        name: str,
-        url: str,
-        config: Optional[Config] = None,
-        disable_cache: bool = False,
-        cert: Optional[Path] = None,
-        client_cert: Optional[Path] = None,
+            self,
+            name: str,
+            url: str,
+            config: Optional[Config] = None,
+            disable_cache: bool = False,
+            cert: Optional[Path] = None,
+            client_cert: Optional[Path] = None,
     ) -> None:
         if name == "pypi":
             raise ValueError("The name [pypi] is reserved for repositories")
@@ -255,10 +253,10 @@ class LegacyRepository(PyPiRepository):
         allow_prereleases = dependency.allows_prereleases()
         if isinstance(constraint, VersionRange):
             if (
-                constraint.max is not None
-                and constraint.max.is_unstable()
-                or constraint.min is not None
-                and constraint.min.is_unstable()
+                    constraint.max is not None
+                    and constraint.max.is_unstable()
+                    or constraint.min is not None
+                    and constraint.min.is_unstable()
             ):
                 allow_prereleases = True
 
@@ -314,7 +312,7 @@ class LegacyRepository(PyPiRepository):
         return packages
 
     def package(
-        self, name: str, version: str, extras: Optional[List[str]] = None
+            self, name: str, version: str, project: ManagedProject, extras: Optional[List[str]] = None
     ) -> Package:
         """
         Retrieve the release information.
@@ -333,7 +331,7 @@ class LegacyRepository(PyPiRepository):
             print(f"Done Downloading {name} {version}")
             return self._packages[index]
         except ValueError:
-            package = super().package(name, version, extras)
+            package = super().package(name, version, project, extras)
             package.source_type = "legacy"
             package._source_url = self._url
             package._source_reference = self.name
@@ -347,7 +345,7 @@ class LegacyRepository(PyPiRepository):
 
         return list(page.links_for_version(package.version))
 
-    def _get_release_info(self, name: str, version: str) -> dict:
+    def _get_release_info(self, name: str, version: str, project: ManagedProject) -> dict:
         page = self._get("/{}/".format(canonicalize_name(name).replace(".", "-")))
         if page is None:
             raise PackageNotFound(f'No package named "{name}"')
@@ -372,49 +370,51 @@ class LegacyRepository(PyPiRepository):
             )
         urls = defaultdict(list)
         files = []
+
         for link in links:
             if link.is_wheel:
                 urls["bdist_wheel"].append(link.url)
             elif link.filename.endswith(
-                (".tar.gz", ".zip", ".bz2", ".xz", ".Z", ".tar")
+                    (".tar.gz", ".zip", ".bz2", ".xz", ".Z", ".tar")
             ):
                 urls["sdist"].append(link.url)
 
             file_hash = f"{link.hash_name}:{link.hash}" if link.hash else None
 
-            if not link.hash or (
-                link.hash_name not in ("sha256", "sha384", "sha512")
-                and hasattr(hashlib, link.hash_name)
-            ):
-                with temporary_directory() as temp_dir:
-                    filepath = Path(temp_dir) / link.filename
-                    self._download(link.url, str(filepath))
-
-                    known_hash = (
-                        getattr(hashlib, link.hash_name)() if link.hash_name else None
-                    )
-                    required_hash = hashlib.sha256()
-
-                    chunksize = 4096
-                    with filepath.open("rb") as f:
-                        while True:
-                            chunk = f.read(chunksize)
-                            if not chunk:
-                                break
-                            if known_hash:
-                                known_hash.update(chunk)
-                            required_hash.update(chunk)
-
-                    if not known_hash or known_hash.hexdigest() == link.hash:
-                        file_hash = "{}:{}".format(
-                            required_hash.name, required_hash.hexdigest()
-                        )
+            # TODO, why is this got validated here? the function named is "get..." this should probably move
+            # if not link.hash or (
+            #     link.hash_name not in ("sha256", "sha384", "sha512")
+            #     and hasattr(hashlib, link.hash_name)
+            # ):
+            #     with temporary_directory() as temp_dir:
+            #         filepath = Path(temp_dir) / link.filename
+            #         self._download(link.url, str(filepath))
+            #
+            #         known_hash = (
+            #             getattr(hashlib, link.hash_name)() if link.hash_name else None
+            #         )
+            #         required_hash = hashlib.sha256()
+            #
+            #         chunksize = 4096
+            #         with filepath.open("rb") as f:
+            #             while True:
+            #                 chunk = f.read(chunksize)
+            #                 if not chunk:
+            #                     break
+            #                 if known_hash:
+            #                     known_hash.update(chunk)
+            #                 required_hash.update(chunk)
+            #
+            #         if not known_hash or known_hash.hexdigest() == link.hash:
+            #             file_hash = "{}:{}".format(
+            #                 required_hash.name, required_hash.hexdigest()
+            #             )
 
             files.append({"file": link.filename, "hash": file_hash})
 
         data.files = files
 
-        info = self._get_info_from_urls(urls)
+        info = self._get_info_from_urls(urls, project)
 
         data.summary = info.summary
         data.requires_dist = info.requires_dist
@@ -448,5 +448,12 @@ class LegacyRepository(PyPiRepository):
 
         return Page(response.url, response.content, response.headers)
 
-    def _download(self, url, dest):  # type: (str, str) -> None
-        return download_file(url, dest, session=self.session)
+    # def _download(self, url, dest):  # type: (str, str) -> None
+    #     from poetry.app.relaxed_poetry import rp
+    #     rp.artifacts.fetch()
+        # print(f"HERE: download {url}")
+        # try:
+        #     return download_file(url, dest, session=self.session)
+        # finally:
+        #     print(f"HERE: done download {url}")
+

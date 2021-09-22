@@ -20,7 +20,7 @@ class BaseRepository:
         raise NotImplementedError()
 
     def package(
-        self, name: str, version: str, extras: Optional[List[str]] = None
+        self, name: str, version: str, project, extras: Optional[List[str]] = None
     ) -> None:
         raise NotImplementedError()
 
