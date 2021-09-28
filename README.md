@@ -11,7 +11,7 @@ Since, in my eyes, there is no real alternative to poetry, I choose to fork it a
 All of the changes that were made in this fork are documented in the wiki, the followings are some notable ones:
 - Forced dependency versions
 - Relaxation of version-enforcements
-- Faster dependency-versions resolution (~4 times faster on tested projects)
+- Faster dependency-versions resolution (more than 4 times faster on tested projects)
 - Multi-package projects support  
 - virtual environments are built inside the project directory by default
 - Project and other components scaffolding using [protopy](https://github.com/bennylut/protopy)
