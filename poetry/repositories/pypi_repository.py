@@ -2,7 +2,7 @@ import logging
 import threading
 import urllib.parse
 from collections import defaultdict
-from typing import Dict
+from typing import Dict, Optional
 from typing import List
 from typing import TYPE_CHECKING
 from typing import Union
@@ -32,14 +32,12 @@ from .exceptions import PackageNotFound
 from .remote_repository import RemoteRepository
 from ..console import console
 from ..managed_project import ManagedProject
-from ..utils.env import Env
 
 cache_control_logger.setLevel(logging.ERROR)
 
 logger = logging.getLogger(__name__)
 
-if TYPE_CHECKING:
-    from poetry.inspection.info import PackageInfo
+from poetry.inspection.info import PackageInfo
 
 
 class PyPiRepository(RemoteRepository):
@@ -229,41 +227,6 @@ class PyPiRepository(RemoteRepository):
         """
         from poetry.inspection.info import PackageInfo
 
-        if self._disable_cache:
-            return PackageInfo.load(self._get_release_info(name, version, project))
-
-        cached = self._cache.remember_forever(
-            f"{name}:{version}", lambda: self._get_release_info(name, version, project)
-        )
-
-        cache_version = cached.get("_cache_version", "0.0.0")
-        if parse_constraint(cache_version) != self.CACHE_VERSION:
-            # The cache must be updated
-            self._log(
-                f"The cache for {name} {version} is outdated. Refreshing.",
-                level="debug",
-            )
-            cached = self._get_release_info(name, version, project)
-
-            self._cache.forever(f"{name}:{version}", cached)
-
-        return PackageInfo.load(cached)
-
-    def find_links_for_package(self, package: Package) -> List[Link]:
-        json_data = self._get(f"pypi/{package.name}/{package.version}/json")
-        if json_data is None:
-            return []
-
-        links = []
-        for url in json_data["urls"]:
-            h = "sha256={}".format(url["digests"]["sha256"])
-            links.append(Link(url["url"] + "#" + h))
-
-        return links
-
-    def _get_release_info(self, name: str, version: str, project: ManagedProject, ) -> dict:
-        from poetry.inspection.info import PackageInfo
-
         self._log(f"Getting info for {name} ({version}) from PyPI", "debug")
 
         json_data = self._get(f"pypi/{name}/{version}/json")
@@ -282,6 +245,11 @@ class PyPiRepository(RemoteRepository):
             files=info.get("files", []),
             cache_version=str(self.CACHE_VERSION),
         )
+
+        package = data.to_package()
+        if package.python_constraint.intersect(project.env.python_constraint).is_empty():
+            # this package is not usable for this project - we can stop trying to bring more information
+            return data
 
         try:
             version_info = json_data["releases"][version]
@@ -313,7 +281,7 @@ class PyPiRepository(RemoteRepository):
                 urls[dist_type].append(url["url"])
 
             if not urls:
-                return data.asdict()
+                return data
 
             info = self._get_info_from_urls(urls, project)
 
@@ -322,7 +290,19 @@ class PyPiRepository(RemoteRepository):
             if not data.requires_python:
                 data.requires_python = info.requires_python
 
-        return data.asdict()
+        return data
+
+    def find_links_for_package(self, package: Package) -> List[Link]:
+        json_data = self._get(f"pypi/{package.name}/{package.version}/json")
+        if json_data is None:
+            return []
+
+        links = []
+        for url in json_data["urls"]:
+            h = "sha256={}".format(url["digests"]["sha256"])
+            links.append(Link(url["url"] + "#" + h))
+
+        return links
 
     def _get(self, endpoint: str) -> Union[dict, None]:
         try:
@@ -377,9 +357,6 @@ class PyPiRepository(RemoteRepository):
                 else:
                     if f"{pyver}-{abi}-{plat}" in platform_accepted_tags:
                         platform_specific_wheels.append(wheel)
-                    else:
-                        console.println(f"Skipping wheel {link.filename}, tags did not match the project platform tags",
-                                        Verbosity.DEBUG)
 
             if universal_wheel is not None:
                 return self._get_info_from_wheel(universal_wheel, project)
@@ -435,26 +412,31 @@ class PyPiRepository(RemoteRepository):
             if universal_python2_wheel:
                 return self._get_info_from_wheel(universal_python2_wheel, project)
 
-            if platform_specific_wheels and "sdist" not in urls:
+            if platform_specific_wheels:
                 # Pick the first wheel available and hope for the best
                 return self._get_info_from_wheel(platform_specific_wheels[0], project)
 
         return self._get_info_from_sdist(urls["sdist"][0], project)
 
     def _get_info_from_wheel(self, url: str, project: ManagedProject) -> "PackageInfo":
-        from poetry.inspection.info import PackageInfo
 
-        self._log(
-            "Downloading wheel: {}".format(
-                urllib.parse.urlparse(url).path.rsplit("/")[-1]
-            ),
-            level="debug",
-        )
+        def get_info():
+            from poetry.inspection.info import PackageInfo
 
-        # filename = os.path.basename(urllib.parse.urlparse(url).path.rsplit("/")[-1])
-        from poetry.app.relaxed_poetry import rp
-        wheel_archive = rp.artifacts.fetch(project, Link(url), console)
-        return PackageInfo.from_wheel(wheel_archive)
+            self._log(
+                "Downloading wheel: {}".format(
+                    urllib.parse.urlparse(url).path.rsplit("/")[-1]
+                ),
+                level="debug",
+            )
+
+            # filename = os.path.basename(urllib.parse.urlparse(url).path.rsplit("/")[-1])
+            from poetry.app.relaxed_poetry import rp
+            wheel_archive = rp.artifacts.fetch(project, Link(url), console)
+
+            return PackageInfo.from_wheel(wheel_archive).asdict()
+
+        return PackageInfo.load(self._cache.remember_forever(f"wheels/{url}", get_info))
 
         # with temporary_directory() as temp_dir:
         #     filepath = Path(temp_dir) / filename
@@ -463,20 +445,24 @@ class PyPiRepository(RemoteRepository):
         #     return PackageInfo.from_wheel(filepath)
 
     def _get_info_from_sdist(self, url: str, project: ManagedProject) -> "PackageInfo":
-        from poetry.inspection.info import PackageInfo
 
-        self._log(
-            "Downloading sdist: {}".format(
-                urllib.parse.urlparse(url).path.rsplit("/")[-1]
-            ),
-            level="debug",
-        )
+        def get_info():
+            from poetry.inspection.info import PackageInfo
 
-        # filename = os.path.basename(urllib.parse.urlparse(url).path)
+            self._log(
+                "Downloading sdist: {}".format(
+                    urllib.parse.urlparse(url).path.rsplit("/")[-1]
+                ),
+                level="debug",
+            )
 
-        from poetry.app.relaxed_poetry import rp
-        wheel_archive = rp.artifacts.fetch(project, Link(url), console)
-        return PackageInfo.from_sdist(wheel_archive)
+            # filename = os.path.basename(urllib.parse.urlparse(url).path)
+
+            from poetry.app.relaxed_poetry import rp
+            wheel_archive = rp.artifacts.fetch(project, Link(url), console)
+            return PackageInfo.from_sdist(wheel_archive).asdict()
+
+        return PackageInfo.load(self._cache.remember_forever(f"sdists/{url}", get_info))
 
         # with temporary_directory() as temp_dir:
         #     filepath = Path(temp_dir) / filename

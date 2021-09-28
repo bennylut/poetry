@@ -340,7 +340,7 @@ class LegacyRepository(PyPiRepository):
 
         return list(page.links_for_version(package.version))
 
-    def _get_release_info(self, name: str, version: str, project: ManagedProject) -> dict:
+    def get_release_info(self, name: str, version: str, project: ManagedProject) -> "PackageInfo":
         page = self._get("/{}/".format(canonicalize_name(name).replace(".", "-")))
         if page is None:
             raise PackageNotFound(f'No package named "{name}"')
@@ -376,34 +376,6 @@ class LegacyRepository(PyPiRepository):
 
             file_hash = f"{link.hash_name}:{link.hash}" if link.hash else None
 
-            # TODO, why is this got validated here? the function named is "get..." this should probably move
-            # if not link.hash or (
-            #     link.hash_name not in ("sha256", "sha384", "sha512")
-            #     and hasattr(hashlib, link.hash_name)
-            # ):
-            #     with temporary_directory() as temp_dir:
-            #         filepath = Path(temp_dir) / link.filename
-            #         self._download(link.url, str(filepath))
-            #
-            #         known_hash = (
-            #             getattr(hashlib, link.hash_name)() if link.hash_name else None
-            #         )
-            #         required_hash = hashlib.sha256()
-            #
-            #         chunksize = 4096
-            #         with filepath.open("rb") as f:
-            #             while True:
-            #                 chunk = f.read(chunksize)
-            #                 if not chunk:
-            #                     break
-            #                 if known_hash:
-            #                     known_hash.update(chunk)
-            #                 required_hash.update(chunk)
-            #
-            #         if not known_hash or known_hash.hexdigest() == link.hash:
-            #             file_hash = "{}:{}".format(
-            #                 required_hash.name, required_hash.hexdigest()
-            #             )
 
             files.append({"file": link.filename, "hash": file_hash})
 
@@ -415,7 +387,7 @@ class LegacyRepository(PyPiRepository):
         data.requires_dist = info.requires_dist
         data.requires_python = info.requires_python
 
-        return data.asdict()
+        return data
 
     def _get(self, endpoint: str) -> Optional[Page]:
         url = self._url + endpoint

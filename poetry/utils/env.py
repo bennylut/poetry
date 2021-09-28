@@ -44,7 +44,7 @@ from packaging.tags import interpreter_version
 from packaging.tags import sys_tags
 from virtualenv.seed.wheels.embed import get_embed_wheel
 
-from poetry.core.semver.helpers import parse_constraint
+from poetry.core.semver.helpers import parse_constraint, VersionTypes
 from poetry.core.semver.version import Version
 from poetry.core.toml.file import TOMLFile
 from poetry.core.version.markers import BaseMarker
@@ -1286,6 +1286,11 @@ class Env:
             self._supported_tags = self.get_supported_tags()
 
         return self._supported_tags
+
+    @cached_property
+    def python_constraint(self) -> VersionTypes:
+        v = self.get_version_info()
+        return parse_constraint(f"{v[0]}.{v[1]}.{v[2]}")
 
     @cached_property
     def supported_tags_strset(self) -> Set[str]:

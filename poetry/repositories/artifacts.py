@@ -108,13 +108,13 @@ class Artifacts:
 
     def _validate_hash(self, artifact: Path, package: Package, io: Printer):
         if package.files:
-            file_meta = next((meta for meta in package.files if meta.get('name') == artifact.name), None)
+            file_meta = next((meta for meta in package.files if meta.get('file') == artifact.name), None)
             if file_meta and file_meta['hash']:
                 archive_hash = ("sha256:" + FileDependency(package.name, artifact, ).hash())
                 if archive_hash != file_meta['hash']:
                     raise RuntimeError(f"Invalid hash for {package} using archive {artifact.name}")
             else:
                 io.println(
-                    f"<warning>Package does not include hash for its archives, "
+                    f"<warning>Package {package.name}:{package.version} does not include hash for its archives, "
                     "including it can improve security, if you can, "
                     "please ask the maintainer of this package to do so.</warning>")
