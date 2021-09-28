@@ -3,7 +3,7 @@ from typing import Optional
 
 from cleo.commands.command import Command as BaseCommand
 
-from poetry.app.relaxed_poetry import rp
+
 
 if TYPE_CHECKING:
     from poetry.console.application import Application
@@ -17,6 +17,7 @@ class Command(BaseCommand):
 
     @property
     def poetry(self) -> "ManagedProject":
+        from poetry.app.relaxed_poetry import rp
         if self._poetry is None:
             return rp.active_project
         return self._poetry

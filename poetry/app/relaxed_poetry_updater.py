@@ -5,15 +5,13 @@ from typing import TYPE_CHECKING, Optional
 import os
 import site
 
-from poetry.core.packages.dependency import Dependency
-from poetry.core.packages.package import Package
+from poetry.core.pyproject.toml import PyProject
 from poetry.core.utils.props_ext import cached_property
 
 from poetry.console import console
 from poetry.console.exceptions import PoetrySimpleConsoleException
+from poetry.factory import Factory
 from poetry.repositories.installed_repository import InstalledRepository
-from poetry.repositories.pool import Pool
-from poetry.repositories.pypi_repository import PyPiRepository
 
 if TYPE_CHECKING:
     from poetry.app.relaxed_poetry import RelaxedPoetry
@@ -28,11 +26,11 @@ class RelaxedPoetryUpdater:
         from poetry.utils.env import EnvManager
         return EnvManager.get_system_env(naive=False)
 
-    @cached_property
-    def _pool(self) -> Pool:
-        pool = Pool()
-        pool.add_repository(PyPiRepository())
-        return pool
+    # @cached_property
+    # def _pool(self) -> Pool:
+    #     pool = Pool()
+    #     pool.add_repository(PyPiRepository())
+    #     return pool
 
     @cached_property
     def bin_dir(self) -> Path:
@@ -66,28 +64,28 @@ class RelaxedPoetryUpdater:
         except ValueError:
             return False
 
-    def _find_update_version(self, version: Optional[str]) -> Optional[Package]:
-        if not version:
-            version = ">=" + self._rp.version
-
-        console.println(f"Attempting to find update version with constraint: {version}")
-        repo = self._pool.repositories[0]
-        packages = repo.find_packages(
-            Dependency("relaxed-poetry", version)
-        )
-
-        if not packages:
-            raise PoetrySimpleConsoleException(f"No release found for version '{version}'")
-
-        packages.sort(
-            key=cmp_to_key(
-                lambda x, y: 0
-                if x.version == y.version
-                else int(x.version < y.version or -1)
-            )
-        )
-
-        return packages[0] if len(packages) > 0 else None
+    # def _find_update_version(self, version: Optional[str]) -> Optional[Package]:
+    #     if not version:
+    #         version = ">=" + self._rp.version
+    #
+    #     console.println(f"Attempting to find update version with constraint: {version}")
+    #     repo = self._pool.repositories[0]
+    #     packages = repo.find_packages(
+    #         Dependency("relaxed-poetry", version)
+    #     )
+    #
+    #     if not packages:
+    #         raise PoetrySimpleConsoleException(f"No release found for version '{version}'")
+    #
+    #     packages.sort(
+    #         key=cmp_to_key(
+    #             lambda x, y: 0
+    #             if x.version == y.version
+    #             else int(x.version < y.version or -1)
+    #         )
+    #     )
+    #
+    #     return packages[0] if len(packages) > 0 else None
 
     def update(self, version: Optional[str], dry_run: bool) -> bool:
         if not self.is_installed_using_recommended_installer():
@@ -96,20 +94,34 @@ class RelaxedPoetryUpdater:
                 "so it cannot be updated automatically."
             )
 
-        release = self._find_update_version(version)
 
-        if release is None:
-            console.println("No new release found")
-            return False
+        env = self._installation_env
+        from poetry.__version__ import __version__
 
-        console.println(f"Updating <c1>Relaxed-Poetry</c1> to <c2>{release.version}</c2>")
-        console.println()
+        pyproject = PyProject.new_in_mem("rp-installation", "1.0.0")
+        dependencies = pyproject.dependencies
+        dependencies["relaxed-poetry"] = version or f">={__version__}"
+        dependencies["python"] = "^3.6"
 
-        self.add_packages(f"relaxed-poetry {release}", dry_run=dry_run)
-        self._make_bin()
+        pt = Factory().create_poetry_for_pyproject(pyproject, env=env)
+        pt.installer.update(True)
+        pt.installer.dry_run(dry_run)
+        pt.installer.run()
 
-        console.println(f"<c1>Relaxed-Poetry</c1> (<c2>{release.version}</c2>) is installed now. Great!")
-        console.println()
+        # release = self._find_update_version(version)
+        #
+        # if release is None:
+        #     console.println("No new release found")
+        #     return False
+        #
+        # console.println(f"Updating <c1>Relaxed-Poetry</c1> to <c2>{release.version}</c2>")
+        # console.println()
+        #
+        # self.add_packages(f"relaxed-poetry {release}", dry_run=dry_run)
+        # self._make_bin()
+        #
+        # console.println(f"<c1>Relaxed-Poetry</c1> (<c2>{release.version}</c2>) is installed now. Great!")
+        # console.println()
 
         return True
 
@@ -122,10 +134,10 @@ class RelaxedPoetryUpdater:
         self.bin_dir.mkdir(parents=True, exist_ok=True)
 
         script = "rp"
-        target_script = "venv/bin/poetry"
+        target_script = "venv/bin/rp"
         if WINDOWS:
             script = "rp.exe"
-            target_script = "venv/Scripts/poetry.exe"
+            target_script = "venv/Scripts/rp.exe"
 
         if self.bin_dir.joinpath(script).exists():
             self.bin_dir.joinpath(script).unlink()
@@ -141,36 +153,38 @@ class RelaxedPoetryUpdater:
                 self._rp.installation_dir().joinpath(target_script), self.bin_dir.joinpath(script)
             )
 
-    def add_packages(self, *packages: str, dry_run: bool):
-        from poetry.config.config import Config
-        from poetry.core.packages.dependency import Dependency
-        from poetry.core.packages.project_package import ProjectPackage
-        from poetry.installation.installer import Installer
-        from poetry.packages.locker import NullLocker
-        from poetry.repositories.installed_repository import InstalledRepository
+    # def add_packages(self, *packages: str, dry_run: bool):
+    #     from poetry.config.config import Config
+    #     from poetry.core.packages.dependency import Dependency
+    #     from poetry.core.packages.project_package import ProjectPackage
+    #     from poetry.installation.installer import Installer
+    #     from poetry.packages.locker import NullLocker
+    #     from poetry.repositories.installed_repository import InstalledRepository
+    #
+    #     env = self._installation_env
+    #
+    #     installed = InstalledRepository.load(env)
+    #
+    #     root = ProjectPackage("rp-add-packages", "0.0.0")
+    #     root.python_versions = ".".join(str(c) for c in env.version_info[:3])
+    #     for package in packages:
+    #         root.add_dependency(Dependency.create_from_pep_508(package))
+    #
+    #     installer = Installer(
+    #         console.io,
+    #         env,
+    #         root,
+    #         NullLocker(self._rp.installation_dir().joinpath("poetry.lock"), {}),
+    #         self._pool,
+    #         Config(),
+    #         installed=installed,
+    #     )
+    #
+    #     installer.update(True)
+    #     installer.dry_run(dry_run)
+    #     installer.run()
 
-        env = self._installation_env
-        installed = InstalledRepository.load(env)
+    # def has_package(self, package: str, constraint: str = "*") -> bool:
+    #     ir: InstalledRepository = self._installed_repository
+    #     return len(ir.find_packages(Dependency(package, constraint))) > 0
 
-        root = ProjectPackage("rp-add-packages", "0.0.0")
-        root.python_versions = ".".join(str(c) for c in env.version_info[:3])
-        for package in packages:
-            root.add_dependency(Dependency.create_from_pep_508(package))
-
-        installer = Installer(
-            console.io,
-            env,
-            root,
-            NullLocker(self._rp.installation_dir().joinpath("poetry.lock"), {}),
-            self._pool,
-            Config(),
-            installed=installed,
-        )
-
-        installer.update(True)
-        installer.dry_run(dry_run)
-        installer.run()
-
-    def has_package(self, package: str, constraint: str = "*") -> bool:
-        ir: InstalledRepository = self._installed_repository
-        return len(ir.find_packages(Dependency(package, constraint))) > 0

@@ -21,7 +21,7 @@ from cleo.io.io import IO
 from cleo.io.outputs.output import Output
 
 from poetry.__version__ import __version__
-from poetry.app.relaxed_poetry import rp
+
 from poetry.console import console
 
 from .command_loader import CommandLoader
@@ -120,12 +120,14 @@ class Application(BaseApplication):
             flag=False))
 
     def activate_relaxed_poetry(self, *args) -> None:
+        from poetry.app.relaxed_poetry import rp
         from pathlib import Path
         rp.activate_project(Path.cwd(), self._running_command.name, self.disable_plugins)
 
     @property
     def poetry(self) -> "ManagedProject":
         """@deprecated - use rp.active_project instead"""
+        from poetry.app.relaxed_poetry import rp
         return rp.active_project
 
     @property

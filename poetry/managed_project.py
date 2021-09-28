@@ -2,6 +2,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Iterator, Optional
 from typing import List
 
+from cleo.io.outputs.output import Verbosity
 from poetry.core.pyproject.toml import PyProject
 from poetry.core.utils.props_ext import cached_property
 
@@ -28,20 +29,21 @@ class ManagedProject(BasePoetry):
 
     def __init__(
             self,
-            file: Path,
             pyproject: PyProject,
             package: "ProjectPackage",
             locker: "Locker",
             config: "Config",
+            env: Optional["Env"] = None,
     ):
         from .repositories.pool import Pool  # noqa
 
-        super(ManagedProject, self).__init__(file, pyproject, package)
+        super(ManagedProject, self).__init__(pyproject, package)
 
         self._locker = locker
         self._config = config
         self._pool = Pool()
         self._plugin_manager: Optional["PluginManager"] = None
+        self._env = env
 
     @property
     def path(self) -> Path:
@@ -59,18 +61,26 @@ class ManagedProject(BasePoetry):
     def config(self) -> "Config":
         return self._config
 
-    @cached_property
+    @property
     def env(self) -> Optional["Env"]:
         if not self.pyproject.requires_python:
             return None
 
-        from .utils.env import EnvManager
+        if not self._env:
 
-        env_manager = EnvManager(self)
-        env = env_manager.create_venv(ignore_activated_env=True)
+            if not self.pyproject.is_stored():
+                return None
 
-        console.println(f"Using virtualenv: <comment>{env.path}</>", "verbose")
-        return env
+
+            from .utils.env import EnvManager
+
+            env_manager = EnvManager(self)
+            env = env_manager.create_venv(ignore_activated_env=True)
+
+            console.println(f"Using virtualenv: <comment>{env.path}</>", Verbosity.VERBOSE)
+            self._env = env
+
+        return self._env
 
     @cached_property
     def authenticator(self) -> Authenticator:
@@ -82,14 +92,7 @@ class ManagedProject(BasePoetry):
         if self.env is None:
             return None
 
-        installer = Installer(
-            console.io,
-            self.env,
-            self.package,
-            self.locker,
-            self.pool,
-            self.config,
-        )
+        installer = Installer(self)
 
         installer.use_executor(self.config.get("experimental.new-installer", False))
         return installer

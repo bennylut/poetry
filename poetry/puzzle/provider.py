@@ -8,13 +8,12 @@ import urllib.parse
 from contextlib import contextmanager
 from pathlib import Path
 from tempfile import mkdtemp
-from typing import Any
 from typing import Dict
-from typing import Iterator
 from typing import List
 from typing import Optional
 from typing import Union
 
+from cleo.io.io import IO
 from cleo.ui.progress_indicator import ProgressIndicator
 
 from poetry.core.packages.dependency import Dependency
@@ -27,6 +26,8 @@ from poetry.core.semver.helpers import parse_constraint, VersionTypes
 from poetry.core.semver.version import Version
 from poetry.core.vcs.git import Git
 from poetry.core.version.markers import MarkerUnion
+
+from poetry.console import console
 from poetry.inspection.info import PackageInfo
 from poetry.inspection.info import PackageInfoError
 from poetry.mixology.incompatibility import Incompatibility
@@ -43,6 +44,10 @@ from poetry.utils.helpers import safe_rmtree
 from poetry.utils.helpers import temporary_directory
 
 logger = logging.getLogger(__name__)
+
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from poetry.managed_project import ManagedProject
 
 
 class Indicator(ProgressIndicator):
@@ -61,18 +66,25 @@ class Provider:
     UNSAFE_PACKAGES = set()
 
     def __init__(
-            self, package: Package, pool: Pool, io: Any, env: Env
+            self,
+            project: "ManagedProject", *,
+            package: Optional[Package] = None,
+            io: Optional[IO] = None
     ) -> None:
-        self._package = package
-        self._pool = pool
-        self._io = io
+        env = project.env
+
+        self._project = project
+        self._package = package or project.package
+        self._pool = project.pool
+        self._io = io or console.io
         self._env = env
-        self._python_constraint = package.python_constraint
+        self._python_constraint = project.package.python_constraint
         self._installed_python_constraint = _installed_python_version_constraint(env) if env else None
         self._search_for = {}
+        # TODO: lock has a context manager associated with it already - replace it and remove semaphore custom context.
         self._search_for_sem = threading.Semaphore(1)
         self._is_debugging = self._io.is_debug() or self._io.is_very_verbose()
-        self._in_progress = False
+        # self._in_progress = False
         self._overrides = {}
         self._deferred_cache = {}
         self._load_deferred = True
@@ -98,6 +110,7 @@ class Provider:
     def load_deferred(self, load_deferred: bool) -> None:
         self._load_deferred = load_deferred
 
+    # TODO: where does it make sense to use a different environment than the one provided to the constructor?
     @contextmanager
     def use_environment(self, env: Env) -> "Provider":
         original_env = self._env
@@ -451,7 +464,7 @@ class Provider:
                 self._pool.package(
                     package.name,
                     package.version.text,
-                    self._env,
+                    self._project,
                     extras=list(package.dependency.extras),
                     repository=package.dependency.source_name,
                 ),
@@ -801,18 +814,18 @@ class Provider:
 
             self._io.write(debug_info)
 
-    @contextmanager
-    def progress(self) -> Iterator[None]:
-        if not self._io.output.is_decorated() or self.is_debugging():
-            self._io.write_line("Resolving dependencies...")
-            yield
-        else:
-            indicator = Indicator(self._io, "{message} <debug>({elapsed:2s})</debug>")
-
-            with indicator.auto(
-                    "<info>Resolving dependencies...</info>",
-                    "<info>Resolving dependencies...</info>",
-            ):
-                yield
-
-        self._in_progress = False
+    # @contextmanager
+    # def progress(self) -> Iterator[None]:
+    #     if not self._io.output.is_decorated() or self.is_debugging():
+    #         self._io.write_line("Resolving dependencies...")
+    #         yield
+    #     else:
+    #         indicator = Indicator(self._io, "{message} <debug>({elapsed:2s})</debug>")
+    #
+    #         with indicator.auto(
+    #                 "<info>Resolving dependencies...</info>",
+    #                 "<info>Resolving dependencies...</info>",
+    #         ):
+    #             yield
+    #
+    #     self._in_progress = False

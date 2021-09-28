@@ -8,7 +8,7 @@ from poetry.core.utils.props_ext import cached_property
 
 from poetry.app.relaxed_poetry_updater import RelaxedPoetryUpdater
 from poetry.console import console
-from poetry.locations import CONFIG_DIR
+from poetry.locations import CONFIG_DIR, CACHE_DIR
 from poetry.managed_project import ManagedProject
 from poetry.repositories.artifacts import Artifacts
 from poetry.templates.template_executor import TemplateExecutor
@@ -23,7 +23,7 @@ class RelaxedPoetry:
         self._active_project: Optional[ManagedProject] = None
         self._template_executor = TemplateExecutor(self)
         self._updater = RelaxedPoetryUpdater(self)
-        self.artifacts = Artifacts(CONFIG_DIR)
+        self.artifacts = Artifacts(Path(CACHE_DIR) / "artifacts")
 
     def activate_project(self, path: Path, command: str = "build", plugins_disabled: bool = False):
 

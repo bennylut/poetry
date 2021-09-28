@@ -48,9 +48,8 @@ class BuildCommand(EnvCommand):
             from poetry.repositories import Repository
 
             self._io.write_line("Tightening bounds to python version requirements based on dependencies")
-            pool = poetry.pool
 
-            solver = Solver(package, pool, Repository(), Repository(), self._io, env)
+            solver = Solver(poetry, Repository(), Repository())
             bounds = solver.solve().calculate_interpreter_bounds(package.python_constraint)
             bounds_constraint_str = format_python_constraint(bounds)
             poetry.package.python_versions = bounds_constraint_str

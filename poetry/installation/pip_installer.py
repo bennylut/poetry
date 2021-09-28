@@ -202,6 +202,7 @@ class PipInstaller(BaseInstaller):
             # some versions of pip (< 19.0.0) don't understand it
             # so we need to check the version of pip to know
             # if we can rely on the build system
+            # noinspection PyArgumentList
             legacy_pip = self._env.pip_version < self._env.pip_version.__class__(
                 19, 0, 0
             )

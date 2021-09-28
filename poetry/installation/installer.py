@@ -4,11 +4,9 @@ from typing import List
 from typing import Optional
 from typing import Union
 
-from cleo.io.io import IO
-from cleo.io.null_io import NullIO
+from cleo.io.outputs.output import Verbosity
 from poetry.core.packages.package import Package
 
-from poetry.config.config import Config
 from poetry.core.packages.project_package import ProjectPackage
 from poetry.packages import Locker
 from poetry.repositories import Pool
@@ -24,30 +22,26 @@ from .operations import Uninstall
 from .operations import Update
 from .operations.operation import Operation
 from .pip_installer import PipInstaller
+from ..console import console, NullPrinter
 
 if TYPE_CHECKING:
-    from poetry.utils.env import Env
-
     from .operations import OperationTypes
+    from poetry.managed_project import ManagedProject
 
 
 class Installer:
     def __init__(
             self,
-            io: IO,
-            env: "Env",
-            package: ProjectPackage,
-            locker: Locker,
-            pool: Pool,
-            config: Config,
+            project: "ManagedProject",
             installed: Union[Repository, None] = None,
             executor: Optional[Executor] = None,
     ):
-        self._io = io
-        self._env = env
-        self._package = package
-        self._locker = locker
-        self._pool = pool
+
+        self._project = project
+        self._env = project.env
+        self._package = project.package
+        self._locker = project.locker
+        self._pool = project.pool
 
         self._dry_run = False
         self._requires_synchronization = False
@@ -66,7 +60,7 @@ class Installer:
         self._extras = []
 
         if executor is None:
-            executor = Executor(self._env, self._pool, config, self._io)
+            executor = Executor(project)
 
         self._executor = executor
         self._use_executor = False
@@ -204,12 +198,9 @@ class Installer:
 
         locked_repository = self._locker.locked_repository(True)
         solver = Solver(
-            self._package,
-            self._pool,
+            self._project,
             locked_repository,
             locked_repository,
-            self._io,
-            self._env
         )
 
         ops = solver.solve(use_latest=[]).calculate_operations()
@@ -240,24 +231,23 @@ class Installer:
                 if extra not in self._package.extras:
                     raise ValueError(f"Extra [{extra}] is not specified.")
 
-            self._io.write_line("<info>Updating dependencies</>")
+            console.println("<info>Updating dependencies</>")
             solver = Solver(
-                self._package,
-                self._pool,
+                self._project,
                 self._installed_repository,
                 locked_repository,
-                self._io,
-                self._env
+                printer=console,
+                package=self._package,
             )
 
             ops = solver.solve(use_latest=self._whitelist).calculate_operations()
         else:
-            self._io.write_line("<info>Installing dependencies from lock file</>")
+            console.println("<info>Installing dependencies from lock file</>")
 
             locked_repository = self._locker.locked_repository(True)
 
             if not self._locker.is_fresh():
-                self._io.write_line(
+                console.println(
                     "<warning>"
                     "Warning: The lock file is not up to date with "
                     "the latest changes in pyproject.toml. "
@@ -297,11 +287,7 @@ class Installer:
         else:
             root = self._package.without_optional_dependency_groups()
 
-        if self._io.is_verbose():
-            self._io.write_line("")
-            self._io.write_line(
-                "<info>Finding the necessary packages for the current system</>"
-            )
+        console.println("\n<info>Finding the necessary packages for the current system</>", verbosity=Verbosity.VERBOSE)
 
         # We resolve again by only using the lock file
         pool = Pool(ignore_repository_names=True, parent=self._pool)
@@ -316,7 +302,7 @@ class Installer:
         pool.add_repository(repo)
 
         solver = Solver(
-            root, pool, self._installed_repository, locked_repository, NullIO(), self._env
+            self._project, self._installed_repository, locked_repository, package=root, printer=NullPrinter
         )
         # Everything is resolved at this point, so we no longer need
         # to load deferred dependencies (i.e. VCS, URL and path dependencies)
@@ -357,7 +343,6 @@ class Installer:
                       if op.job_type == "uninstall"
                   ] + ops
 
-
         # We need to filter operations so that packages
         # not compatible with the current system,
         # or optional and not requested, are dropped
@@ -378,15 +363,15 @@ class Installer:
             updated_lock = self._locker.set_lock_data(self._package, packages)
 
             if updated_lock:
-                self._io.write_line("")
-                self._io.write_line("<info>Writing lock file</>")
+                console.println("")
+                console.println("<info>Writing lock file</>")
 
     def _execute(self, operations: List["OperationTypes"]) -> int:
         if self._use_executor:
             return self._executor.execute(operations)
 
         if not operations and (self._execute_operations or self._dry_run):
-            self._io.write_line("No dependencies to install or update")
+            console.println("No dependencies to install or update")
 
         if operations and (self._execute_operations or self._dry_run):
             installs = 0
@@ -403,8 +388,8 @@ class Installer:
                 elif op.job_type == "uninstall":
                     uninstalls += 1
 
-            self._io.write_line("")
-            self._io.write_line(
+            console.println("")
+            console.println(
                 "Package operations: "
                 "<info>{}</> install{}, "
                 "<info>{}</> update{}, "
@@ -422,7 +407,7 @@ class Installer:
                 )
             )
 
-        self._io.write_line("")
+        console.println("")
 
         for op in operations:
             self._execute_operation(op)
@@ -440,7 +425,7 @@ class Installer:
     def _execute_install(self, operation: Install) -> None:
         if operation.skipped:
             if self.is_verbose() and (self._execute_operations or self.is_dry_run()):
-                self._io.write_line(
+                console.println(
                     "  - Skipping <c1>{}</c1> (<c2>{}</c2>) {}".format(
                         operation.package.pretty_name,
                         operation.package.full_pretty_version,
@@ -451,7 +436,7 @@ class Installer:
             return
 
         if self._execute_operations or self.is_dry_run():
-            self._io.write_line(
+            console.println(
                 "  - Installing <c1>{}</c1> (<c2>{}</c2>)".format(
                     operation.package.pretty_name, operation.package.full_pretty_version
                 )
@@ -468,7 +453,7 @@ class Installer:
 
         if operation.skipped:
             if self.is_verbose() and (self._execute_operations or self.is_dry_run()):
-                self._io.write_line(
+                console.println(
                     "  - Skipping <c1>{}</c1> (<c2>{}</c2>) {}".format(
                         target.pretty_name,
                         target.full_pretty_version,
@@ -479,7 +464,7 @@ class Installer:
             return
 
         if self._execute_operations or self.is_dry_run():
-            self._io.write_line(
+            console.println(
                 "  - Updating <c1>{}</c1> (<c2>{}</c2> -> <c2>{}</c2>)".format(
                     target.pretty_name,
                     source.full_pretty_version,
@@ -495,7 +480,7 @@ class Installer:
     def _execute_uninstall(self, operation: Uninstall) -> None:
         if operation.skipped:
             if self.is_verbose() and (self._execute_operations or self.is_dry_run()):
-                self._io.write_line(
+                console.println(
                     "  - Not removing <c1>{}</c1> (<c2>{}</c2>) {}".format(
                         operation.package.pretty_name,
                         operation.package.full_pretty_version,
@@ -506,7 +491,7 @@ class Installer:
             return
 
         if self._execute_operations or self.is_dry_run():
-            self._io.write_line(
+            console.println(
                 "  - Removing <c1>{}</c1> (<c2>{}</c2>)".format(
                     operation.package.pretty_name, operation.package.full_pretty_version
                 )
@@ -607,7 +592,7 @@ class Installer:
         return list(get_extra_package_names(repo.packages, extras, self._extras))
 
     def _get_installer(self) -> BaseInstaller:
-        return PipInstaller(self._env, self._io, self._pool)
+        return PipInstaller(self._env, console.io, self._pool)
 
     def _get_installed(self) -> InstalledRepository:
         return InstalledRepository.load(self._env)

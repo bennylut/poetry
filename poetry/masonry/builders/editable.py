@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 from typing import List
 
+from cleo.io.outputs.output import Verbosity
 from poetry.core.masonry.builders.builder import Builder
 from poetry.core.masonry.builders.sdist import SdistBuilder
 from poetry.core.masonry.utils.package_include import PackageInclude
@@ -48,11 +49,11 @@ class EditableBuilder(Builder):
 
     def build(self, include_symlinks: bool = False) -> None:
         console.println(f"  - Building package <c1>{self._package.name}</c1> in <info>editable</info> mode",
-                        mode="debug")
+                        verbosity=Verbosity.DEBUG)
 
         if self._package.build_script:
             if self._package.build_should_generate_setup():
-                console.println("  - <warning>Falling back on using a <b>setup.py</b></warning>", mode="debug")
+                console.println("  - <warning>Falling back on using a <b>setup.py</b></warning>", Verbosity.DEBUG)
                 return self._setup_build()
 
             self._run_build_script(self._package.build_script)
@@ -60,7 +61,7 @@ class EditableBuilder(Builder):
         for removed in self._env.site_packages.remove_distribution_files(
                 distribution_name=self._package.name
         ):
-            console.println(f"  - Removed <c2>{removed.name}</c2> directory from <b>{removed.parent}</b>", mode="debug")
+            console.println(f"  - Removed <c2>{removed.name}</c2> directory from <b>{removed.parent}</b>", Verbosity.DEBUG)
 
         added_files = []
         added_files += self._add_pth(include_symlinks)
@@ -68,7 +69,7 @@ class EditableBuilder(Builder):
         self._add_dist_info(added_files)
 
     def _run_build_script(self, build_script: Path) -> None:
-        console.println(f"  - Executing build script: <b>{build_script}</b>", mode="debug")
+        console.println(f"  - Executing build script: <b>{build_script}</b>", Verbosity.DEBUG)
         self._env.run("python", str(self._path.joinpath(build_script)), call=True)
 
     def _setup_build(self) -> None:
@@ -121,7 +122,7 @@ class EditableBuilder(Builder):
         for file in self._env.site_packages.find(path=pth_file, writable_only=True):
             console.println(
                 f"  - Removing existing <c2>{file.name}</c2> from <b>{file.parent}</b> for {self._poetry.file.parent}",
-                mode="debug")
+                Verbosity.DEBUG)
             # We can't use unlink(missing_ok=True) because it's not always available
             if file.exists():
                 file.unlink()
@@ -132,7 +133,7 @@ class EditableBuilder(Builder):
             )
             console.println(
                 f"  - Adding <c2>{pth_file.name}</c2> to <b>{pth_file.parent}</b> for {self._poetry.file.parent}",
-                mode="debug")
+                Verbosity.DEBUG)
 
             if include_symlinks:
                 console.print("  - Including symlinks to: ")

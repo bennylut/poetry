@@ -21,7 +21,7 @@ from .partial_solution import PartialSolution
 from .result import SolverResult
 from .set_relation import SetRelation
 from .term import Term
-
+from ..console import Printer, console
 
 if TYPE_CHECKING:
     from poetry.puzzle.provider import Provider
@@ -39,17 +39,19 @@ class VersionSolver:
     """
 
     def __init__(
-        self,
-        root: ProjectPackage,
-        provider: "Provider",
-        locked: Dict[str, Package] = None,
-        use_latest: List[str] = None,
+            self,
+            root: ProjectPackage,
+            provider: "Provider",
+            locked: Dict[str, Package] = None,
+            use_latest: List[str] = None,
+            printer: Optional[Printer] = None
     ):
         from .version_prefetcher import VersionPrefetcher
 
         self._root = root
         self._provider = provider
         self._locked = locked or {}
+        self._printer = printer or console
 
         if use_latest is None:
             use_latest = []
@@ -58,7 +60,8 @@ class VersionSolver:
 
         self._incompatibilities: Dict[str, List[Incompatibility]] = {}
         self._solution = PartialSolution()
-        self._forced_versions = {dependency.name:dependency for dependency in root.all_requires if dependency.forced_version}
+        self._forced_versions = {dependency.name: dependency for dependency in root.all_requires if
+                                 dependency.forced_version}
         self._prefetcher = VersionPrefetcher(self)
 
     @property
@@ -136,7 +139,7 @@ class VersionSolver:
                     changed.add(result)
 
     def _propagate_incompatibility(
-        self, incompatibility: Incompatibility
+            self, incompatibility: Incompatibility
     ) -> Optional[Union[str, object]]:
         """
         If incompatibility is almost satisfied by _solution, adds the
@@ -264,8 +267,8 @@ class VersionSolver:
             # backjump to previous_satisfier_level, where incompatibility is
             # guaranteed to allow _propagate to produce more assignments.
             if (
-                previous_satisfier_level < most_recent_satisfier.decision_level
-                or most_recent_satisfier.cause is None
+                    previous_satisfier_level < most_recent_satisfier.decision_level
+                    or most_recent_satisfier.cause is None
             ):
                 self._solution.backtrack(previous_satisfier_level)
                 if new_incompatibility:
@@ -342,19 +345,19 @@ class VersionSolver:
 
             locked = self._get_locked(dependency)
             if locked and (
-                dependency.constraint.allows(locked.version)
-                or locked.is_prerelease()
-                and dependency.constraint.allows(locked.version.next_patch())
+                    dependency.constraint.allows(locked.version)
+                    or locked.is_prerelease()
+                    and dependency.constraint.allows(locked.version.next_patch())
             ):
                 return not dependency.marker.is_any(), 1
 
             # VCS, URL, File or Directory dependencies
             # represent a single version
             if (
-                dependency.is_vcs()
-                or dependency.is_url()
-                or dependency.is_file()
-                or dependency.is_directory()
+                    dependency.is_vcs()
+                    or dependency.is_url()
+                    or dependency.is_file()
+                    or dependency.is_directory()
             ):
                 return not dependency.marker.is_any(), 1
 
@@ -448,8 +451,8 @@ class VersionSolver:
                 self._incompatibilities[term.dependency.complete_name] = []
 
             if (
-                incompatibility
-                in self._incompatibilities[term.dependency.complete_name]
+                    incompatibility
+                    in self._incompatibilities[term.dependency.complete_name]
             ):
                 continue
 

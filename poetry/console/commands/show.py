@@ -7,7 +7,7 @@ from cleo.helpers import argument
 from cleo.helpers import option
 
 from .env_command import EnvCommand
-from .. import console
+from .. import console, NullPrinter
 
 if TYPE_CHECKING:
     from cleo.io.io import IO  # noqa
@@ -159,12 +159,11 @@ lists all packages available."""
         pool = Pool(ignore_repository_names=True)
         pool.add_repository(locked_repo)
         solver = Solver(
-            root,
-            pool=pool,
+            self.poetry,
+            package=root,
             installed=Repository(),
             locked=locked_repo,
-            io=NullIO(),
-            env=self.env,
+            printer=NullPrinter,
         )
         solver.provider.load_deferred(False)
         with solver.use_environment(self.env):
@@ -475,7 +474,7 @@ lists all packages available."""
 
             for dep in requires:
                 if dep.name == package.name:
-                    provider = Provider(root, self.poetry.pool, NullIO())
+                    provider = Provider(self.poetry, package=root, io=NullIO())
 
                     if dep.is_vcs():
                         return provider.search_for_vcs(dep)[0]

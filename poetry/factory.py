@@ -18,7 +18,7 @@ from poetry.core.toml.file import TOMLFile
 from .config.config import Config
 from .config.file_config_source import FileConfigSource
 from .locations import CONFIG_DIR
-from .packages.locker import Locker
+from .packages.locker import Locker, NullLocker
 from .packages.project_package import ProjectPackage
 from .plugins.plugin_manager import PluginManager
 from .managed_project import ManagedProject
@@ -26,6 +26,7 @@ from .repositories.pypi_repository import PyPiRepository
 
 if TYPE_CHECKING:
     from .repositories.legacy_repository import LegacyRepository
+    from .utils.env import Env
 
 
 class Factory(BaseFactory):
@@ -37,10 +38,11 @@ class Factory(BaseFactory):
             self, project: PyProject, *,
             with_groups: bool = True,
             io: Optional[IO] = None,
+            env: Optional["Env"] = None,
             disable_plugins: bool = False):
 
         base_poetry = super(Factory, self).create_poetry_for_pyproject(project, with_groups=with_groups)
-        return self._upgrade(base_poetry, io, disable_plugins)
+        return self._upgrade(base_poetry, io, disable_plugins, env = env)
 
     def create_poetry(
             self,
@@ -56,14 +58,19 @@ class Factory(BaseFactory):
             self,
             base_poetry: ManagedProject,
             io: Optional[IO] = None,
-            disable_plugins: bool = False):
+            disable_plugins: bool = False,
+            env: Optional["Env"] = None):
 
         if io is None:
             io = NullIO()
 
-        locker = Locker(
-            base_poetry.pyproject.project_management_files / "lock.toml", base_poetry.local_config
-        )
+        if base_poetry.pyproject.is_stored():
+            locker = Locker(
+                base_poetry.pyproject.project_management_files / "lock.toml", base_poetry.local_config
+            )
+        else:
+            # TODO: why do we needs to supply a file if it is a null locker???
+            locker = NullLocker("/non-existing-file.lock", {})
 
         # Loading global configuration
         config = self.create_config(io)
@@ -74,14 +81,15 @@ class Factory(BaseFactory):
             if p.parent:
                 apply_config(p.parent)
 
-            local_config_file = TOMLFile(base_poetry.pyproject.project_management_files / "config.toml")
-            if local_config_file.exists():
-                if io.is_debug():
-                    io.write_line(
-                        "Loading configuration file {}".format(local_config_file.path)
-                    )
+            if p.is_stored():
+                local_config_file = TOMLFile(base_poetry.pyproject.project_management_files / "config.toml")
+                if local_config_file.exists():
+                    if io.is_debug():
+                        io.write_line(
+                            "Loading configuration file {}".format(local_config_file.path)
+                        )
 
-                config.merge(local_config_file.read())
+                    config.merge(local_config_file.read())
 
         apply_config(base_poetry.pyproject)
 
@@ -98,11 +106,11 @@ class Factory(BaseFactory):
         config.merge({"repositories": repositories})
 
         poetry = ManagedProject(
-            base_poetry.file.path,
             base_poetry.pyproject,
             base_poetry.package,
             locker,
             config,
+            env = env
         )
 
         # Configuring sources

@@ -61,6 +61,7 @@ entrypoints = "^0.3"
 importlib-metadata = {version = "^1.6.0", python = "<3.8"}
 dataclasses = {version = "^0.8", python = "~3.6"}
 protopy-lib = "$protopy-lib-dep"
+typing-extensions = "^3.10.0.2"
 
 
 [tool.poetry.dev-dependencies]
@@ -75,7 +76,7 @@ zipp = { version = "^3.4", python = "<3.8"}
 deepdiff = "^5.0"
 
 [tool.poetry.scripts]
-poetry = "poetry.console.application:main"
+rp = "poetry.console.application:main"
 
 
 [build-system]

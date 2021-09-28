@@ -6,7 +6,7 @@ from cleo.helpers import option
 from cleo.io.outputs.output import Verbosity
 
 from ..init import InitCommand
-from ... import console
+from ... import console, NullPrinter
 
 if TYPE_CHECKING:
     from poetry.console.commands.show import ShowCommand
@@ -83,11 +83,9 @@ class DebugResolveCommand(InitCommand):
             self.poetry.package.python_versions
         )
 
-        pool = self.poetry.pool
+        env = self.poetry.env
 
-        env = EnvManager(self.poetry).get()
-
-        solver = Solver(package, pool, Repository(), Repository(), self._io, env)
+        solver = Solver(self.poetry, Repository(), Repository(), package=package)
 
         ops = solver.solve().calculate_operations()
 
@@ -123,7 +121,7 @@ class DebugResolveCommand(InitCommand):
 
             pool.add_repository(locked_repository)
 
-            solver = Solver(package, pool, Repository(), Repository(), NullIO(), env)
+            solver = Solver(self.poetry, Repository(), Repository(), printer=NullPrinter, package=package)
             with solver.use_environment(env):
                 ops = solver.solve().calculate_operations()
 

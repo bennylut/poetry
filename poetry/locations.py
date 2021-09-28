@@ -1,5 +1,3 @@
-import os
-
 from pathlib import Path
 
 from .utils.appdirs import user_cache_dir

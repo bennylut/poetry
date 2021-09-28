@@ -2,54 +2,43 @@ import csv
 import itertools
 import json
 import os
-import threading
-
 from concurrent.futures import ThreadPoolExecutor
 from concurrent.futures import wait
 from pathlib import Path
 from subprocess import CalledProcessError
-from typing import TYPE_CHECKING
 from typing import Any
 from typing import Dict
 from typing import List
+from typing import TYPE_CHECKING
 from typing import Union
 
 from cleo.io.null_io import NullIO
-
-from poetry.core.packages.file_dependency import FileDependency
 from poetry.core.packages.utils.link import Link
 from poetry.core.pyproject.toml import PyProject
+
 from poetry.utils._compat import decode
 from poetry.utils.env import EnvCommandError
 from poetry.utils.helpers import safe_rmtree
 from poetry.utils.pip import pip_editable_install
-from ..console import console
-from ..managed_project import ManagedProject
-
-from ..utils.authenticator import Authenticator
-from ..utils.pip import pip_install
-from .chef import Chef
 from .chooser import Chooser
 from .operations.install import Install
 from .operations.operation import Operation
 from .operations.uninstall import Uninstall
 from .operations.update import Update
+from ..console import console
+from ..utils.pip import pip_install
 
 if TYPE_CHECKING:
     from cleo.io.io import IO  # noqa
-
-    from poetry.config.config import Config
     from poetry.core.packages.package import Package
-    from poetry.repositories import Pool
-    from poetry.utils.env import Env
-
     from .operations import OperationTypes
+    from poetry.managed_project import ManagedProject
 
 
 class Executor:
     def __init__(
             self,
-            project: ManagedProject,
+            project: "ManagedProject",
             parallel: bool = None,
     ) -> None:
         self._project = project
@@ -57,6 +46,7 @@ class Executor:
         self._dry_run = False
         self._enabled = True
         self._verbose = False
+        self._io = console.io
         # self._authenticator = Authenticator(config, self._io)
         # self._chef = Chef(config, self._env)
         self._chooser = Chooser(project.pool, self._env)
@@ -82,7 +72,7 @@ class Executor:
         self._executed = {"install": 0, "update": 0, "uninstall": 0}
         self._skipped = {"install": 0, "update": 0, "uninstall": 0}
         self._sections = dict()
-        self._lock = threading.Lock()
+        # self._lock = threading.Lock()
         self._shutdown = False
         self._hashes: Dict[str, str] = {}
         self._config = project.config
@@ -149,6 +139,10 @@ class Executor:
         # We group operations by priority
         groups = itertools.groupby(operations, key=lambda o: -o.priority)
         self._sections = dict()
+
+        for operation in operations:
+            self._sections[id(operation)] = console.dynamic_line(f"  <fg=blue;options=bold>•</> {self.get_operation_message(operation)}: ")
+
         for _, group in groups:
             tasks = []
             serial_operations = []
@@ -197,47 +191,20 @@ class Executor:
             return
 
         if self._io.is_debug():
-            with self._lock:
-                section = self._sections[id(operation)]
-                section.write_line(line)
-
+            msg = f"  <fg=blue;options=bold>•</> {self.get_operation_message(operation)}: {line}"
+            console.println(msg)
             return
 
-        with self._lock:
-            section = self._sections[id(operation)]
-            section.clear()
-            section.write(line)
+        self._sections[id(operation)].print(line)
 
     def _execute_operation(self, operation: "OperationTypes") -> None:
         try:
-            if self.supports_fancy_output():
-                if id(operation) not in self._sections:
-                    if self._should_write_operation(operation):
-                        with self._lock:
-                            self._sections[id(operation)] = self._io.section()
-                            self._sections[id(operation)].write_line(
-                                "  <fg=blue;options=bold>•</> {message}: <fg=blue>Pending...</>".format(
-                                    message=self.get_operation_message(operation),
-                                ),
-                            )
-            else:
-                if self._should_write_operation(operation):
-                    if not operation.skipped:
-                        self._io.write_line(
-                            "  <fg=blue;options=bold>•</> {message}".format(
-                                message=self.get_operation_message(operation),
-                            ),
-                        )
-                    else:
-                        self._io.write_line(
-                            "  <fg=default;options=bold,dark>•</> {message}: "
+            self._write(operation, "<fg=blue>Pending...</>")
+            if operation.skipped:
+                self._write(operation,
                             "<fg=default;options=bold,dark>Skipped</> "
                             "<fg=default;options=dark>for the following reason:</> "
-                            "<fg=default;options=bold,dark>{reason}</>".format(
-                                message=self.get_operation_message(operation),
-                                reason=operation.skip_reason,
-                            )
-                        )
+                            f"<fg=default;options=bold,dark>{operation.skip_reason}</>")
 
             try:
                 result = self._do_execute_operation(operation)
@@ -257,64 +224,33 @@ class Executor:
                 from cleo.ui.exception_trace import ExceptionTrace
 
                 if not self.supports_fancy_output():
-                    io = self._io
+                    io = console
                 else:
-                    message = (
-                        "  <error>•</error> {message}: <error>Failed</error>".format(
-                            message=self.get_operation_message(operation, error=True),
-                        )
-                    )
-                    self._write(operation, message)
-                    io = self._sections.get(id(operation), self._io)
+                    self._write(operation, "<error>Failed</error>")
+                    io = self._sections[id(operation)]
 
-                with self._lock:
+                with console.out_lock:
                     trace = ExceptionTrace(e)
                     trace.render(io)
                     io.write_line("")
             finally:
-                with self._lock:
+                with console.out_lock:
                     self._shutdown = True
         except KeyboardInterrupt:
             try:
-                message = "  <warning>•</warning> {message}: <warning>Cancelled</warning>".format(
-                    message=self.get_operation_message(operation, warning=True),
-                )
-                if not self.supports_fancy_output():
-                    self._io.write_line(message)
-                else:
-                    self._write(operation, message)
+                self._write(operation, "<warning>Cancelled</warning>")
             finally:
-                with self._lock:
+                with console.out_lock:
                     self._shutdown = True
 
     def _do_execute_operation(self, operation: "OperationTypes") -> int:
         method = operation.job_type
 
-        operation_message = self.get_operation_message(operation)
         if operation.skipped:
-            if self.supports_fancy_output():
-                self._write(
-                    operation,
-                    "  <fg=default;options=bold,dark>•</> {message}: "
-                    "<fg=default;options=bold,dark>Skipped</> "
-                    "<fg=default;options=dark>for the following reason:</> "
-                    "<fg=default;options=bold,dark>{reason}</>".format(
-                        message=operation_message,
-                        reason=operation.skip_reason,
-                    ),
-                )
-
             self._skipped[operation.job_type] += 1
-
             return 0
 
         if not self._enabled or self._dry_run:
-            self._io.write_line(
-                "  <fg=blue;options=bold>•</> {message}".format(
-                    message=operation_message,
-                )
-            )
-
             return 0
 
         result = getattr(self, f"_execute_{method}")(operation)
@@ -322,10 +258,7 @@ class Executor:
         if result != 0:
             return result
 
-        message = "  <fg=green;options=bold>•</> {message}".format(
-            message=self.get_operation_message(operation, done=True),
-        )
-        self._write(operation, message)
+        self._write(operation, "<fg=green;options=bold>Done</>")
 
         self._increment_operations_count(operation, True)
 
@@ -334,7 +267,7 @@ class Executor:
     def _increment_operations_count(
             self, operation: "OperationTypes", executed: bool
     ) -> None:
-        with self._lock:
+        with console.out_lock:
             if executed:
                 self._executed_operations += 1
                 self._executed[operation.job_type] += 1
@@ -472,12 +405,7 @@ class Executor:
         return status_code
 
     def _execute_uninstall(self, operation: Uninstall) -> int:
-        message = (
-            "  <fg=blue;options=bold>•</> {message}: <info>Removing...</info>".format(
-                message=self.get_operation_message(operation),
-            )
-        )
-        self._write(operation, message)
+        self._write(operation, "<info>Removing...</info>")
 
         return self._remove(operation)
 
@@ -496,13 +424,7 @@ class Executor:
         else:
             archive = self._download(operation)
 
-        operation_message = self.get_operation_message(operation)
-        message = (
-            "  <fg=blue;options=bold>•</> {message}: <info>Installing...</info>".format(
-                message=operation_message,
-            )
-        )
-        self._write(operation, message)
+        self._write(operation, "<info>Installing...</info>")
         return self.pip_install(str(archive), upgrade=operation.job_type == "update")
 
     def _update(self, operation: Union[Install, Update]) -> int:
@@ -527,19 +449,11 @@ class Executor:
 
     def _prepare_file(self, operation: Union[Install, Update]) -> Path:
         package = operation.package
-
-        message = (
-            "  <fg=blue;options=bold>•</> {message}: <info>Preparing...</info>".format(
-                message=self.get_operation_message(operation),
-            )
-        )
-        self._write(operation, message)
+        self._write(operation, "<info>Preparing...</info>")
 
         archive = Path(package.source_url)
         if not Path(package.source_url).is_absolute() and package.root_dir:
             archive = package.root_dir / archive
-
-        # archive = self._chef.prepare(archive)
 
         return archive
 
@@ -549,19 +463,12 @@ class Executor:
         package = operation.package
         operation_message = self.get_operation_message(operation)
 
-        message = (
-            "  <fg=blue;options=bold>•</> {message}: <info>Building...</info>".format(
-                message=operation_message,
-            )
-        )
-        self._write(operation, message)
+        self._write(operation, "<info>Building...</info>")
 
         if package.root_dir:
             req = package.root_dir / package.source_url
         else:
             req = Path(package.source_url).resolve(strict=False)
-
-        # pyproject = PyProject.read(os.path.join(req, "pyproject.toml"), None)
 
         if PyProject.has_poetry_section(req / "pyproject.toml"):
             # Even if there is a build system specified
@@ -607,14 +514,7 @@ class Executor:
         from poetry.core.vcs import Git
 
         package = operation.package
-        operation_message = self.get_operation_message(operation)
-
-        message = (
-            "  <fg=blue;options=bold>•</> {message}: <info>Cloning...</info>".format(
-                message=operation_message,
-            )
-        )
-        self._write(operation, message)
+        self._write(operation, "<info>Cloning...</info>")
 
         src_dir = self._env.path / "src" / package.name
         if src_dir.exists():
@@ -650,103 +550,11 @@ class Executor:
         from poetry.app.relaxed_poetry import rp
         archive = rp.artifacts.fetch(
             self._project, link,
-            self._sections[id(operation)] if self.supports_fancy_output() else console.io,
+            self._sections[id(operation)] if self.supports_fancy_output() else console,
             operation.package
         )
 
-        # archive = self._chef.get_cached_archive_for_link(link)
-        # if archive is link:
-        # No cached distributions was found, so we download and prepare it
-        # try:
-        #     archive = self._download_archive(operation, link)
-        # except BaseException:
-        #     cache_directory = self._chef.get_cache_directory_for_link(link)
-        #     cached_file = cache_directory.joinpath(link.filename)
-        # We can't use unlink(missing_ok=True) because it's not available
-        # in pathlib2 for Python 2.7
-        # if cached_file.exists():
-        #     cached_file.unlink()
-        #
-        # raise
-
-        # TODO: Check readability of the created archive
-
-        # if not link.is_wheel:
-        #     archive = self._chef.prepare(archive)
-
-        # if package.files:
-        #     file_meta = next((meta for meta in package.files if meta.get('name') == link.filename), None)
-        #     if file_meta and file_meta['hash']:
-        #
-        #         archive_hash = (
-        #                 "sha256:"
-        #                 + FileDependency(
-        #             package.name,
-        #             Path(archive.path) if isinstance(archive, Link) else archive,
-        #         ).hash()
-        #         )
-        #         if archive_hash != file_meta['hash']:
-        #             raise RuntimeError(
-        #                 f"Invalid hash for {package} using archive {archive.name}"
-        #             )
-        #
-        #         self._hashes[package.name] = archive_hash
-        #     else:
-        #         console.println(
-        #             f"<warning>Package: {package.name} does not include hash for its archives, "
-        #             "including it can improve security, if you can, "
-        #             "please ask the maintainer of this package to do so.</warning>")
-
         return archive
-
-    # def _download_archive(self, operation: Union[Install, Update], link: Link) -> Path:
-    #     response = self._authenticator.request(
-    #         "get", link.url, stream=True, io=self._sections.get(id(operation), self._io)
-    #     )
-    #     wheel_size = response.headers.get("content-length")
-    #     operation_message = self.get_operation_message(operation)
-    #     message = (
-    #         "  <fg=blue;options=bold>•</> {message}: <info>Downloading...</>".format(
-    #             message=operation_message,
-    #         )
-    #     )
-    #     progress = None
-    #     if self.supports_fancy_output():
-    #         if wheel_size is None:
-    #             self._write(operation, message)
-    #         else:
-    #             from cleo.ui.progress_bar import ProgressBar
-    #
-    #             progress = ProgressBar(
-    #                 self._sections[id(operation)], max=int(wheel_size)
-    #             )
-    #             progress.set_format(message + " <b>%percent%%</b>")
-    #
-    #     if progress:
-    #         with self._lock:
-    #             progress.start()
-    #
-    #     done = 0
-    #     archive = self._chef.get_cache_directory_for_link(link) / link.filename
-    #     archive.parent.mkdir(parents=True, exist_ok=True)
-    #     with archive.open("wb") as f:
-    #         for chunk in response.iter_content(chunk_size=4096):
-    #             if not chunk:
-    #                 break
-    #
-    #             done += len(chunk)
-    #
-    #             if progress:
-    #                 with self._lock:
-    #                     progress.set_progress(done)
-    #
-    #             f.write(chunk)
-    #
-    #     if progress:
-    #         with self._lock:
-    #             progress.finish()
-    #
-    #     return archive
 
     def _should_write_operation(self, operation: Operation) -> bool:
         return not operation.skipped or self._dry_run or self._verbose

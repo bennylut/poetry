@@ -10,3 +10,4 @@
 - universal sources + conda, commands, repositories
 - consider dropping plugins support
 - add build-scripts/tasks section makefile style
+- add recipes in the documentation

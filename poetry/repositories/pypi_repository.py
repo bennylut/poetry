@@ -12,6 +12,7 @@ from cachecontrol import CacheControl
 from cachecontrol.caches.file_cache import FileCache
 from cachecontrol.controller import logger as cache_control_logger
 from cachy import CacheManager
+from cleo.io.outputs.output import Verbosity
 from html5lib.html5parser import parse
 from poetry.core.packages.dependency import Dependency
 from poetry.core.packages.package import Package
@@ -37,20 +38,18 @@ cache_control_logger.setLevel(logging.ERROR)
 
 logger = logging.getLogger(__name__)
 
-
 if TYPE_CHECKING:
     from poetry.inspection.info import PackageInfo
 
 
 class PyPiRepository(RemoteRepository):
-
     CACHE_VERSION = parse_constraint("1.0.0")
 
     def __init__(
-        self,
-        url: str = "https://pypi.org/",
-        disable_cache: bool = False,
-        fallback: bool = True,
+            self,
+            url: str = "https://pypi.org/",
+            disable_cache: bool = False,
+            fallback: bool = True,
     ) -> None:
         super().__init__(url.rstrip("/") + "/simple/")
 
@@ -100,10 +99,10 @@ class PyPiRepository(RemoteRepository):
         allow_prereleases = dependency.allows_prereleases()
         if isinstance(constraint, VersionRange):
             if (
-                constraint.max is not None
-                and constraint.max.is_unstable()
-                or constraint.min is not None
-                and constraint.min.is_unstable()
+                    constraint.max is not None
+                    and constraint.max.is_unstable()
+                    or constraint.min is not None
+                    and constraint.min.is_unstable()
             ):
                 allow_prereleases = True
 
@@ -160,11 +159,11 @@ class PyPiRepository(RemoteRepository):
         return packages or ignored_pre_release_packages
 
     def package(
-        self,
-        name: str,
-        version: str,
-        project: ManagedProject,
-        extras: (Union[list, None]) = None,
+            self,
+            name: str,
+            version: str,
+            project: ManagedProject,
+            extras: (Union[list, None]) = None,
     ) -> Package:
         return self.get_release_info(name, version, project).to_package(name=name, extras=extras)
 
@@ -262,7 +261,7 @@ class PyPiRepository(RemoteRepository):
 
         return links
 
-    def _get_release_info(self, name: str, version: str, project: ManagedProject,) -> dict:
+    def _get_release_info(self, name: str, version: str, project: ManagedProject, ) -> dict:
         from poetry.inspection.info import PackageInfo
 
         self._log(f"Getting info for {name} ({version}) from PyPI", "debug")
@@ -379,7 +378,8 @@ class PyPiRepository(RemoteRepository):
                     if f"{pyver}-{abi}-{plat}" in platform_accepted_tags:
                         platform_specific_wheels.append(wheel)
                     else:
-                        console.println(f"Skipping wheel {link.filename}, tags did not match the project platform tags", mode="debug")
+                        console.println(f"Skipping wheel {link.filename}, tags did not match the project platform tags",
+                                        Verbosity.DEBUG)
 
             if universal_wheel is not None:
                 return self._get_info_from_wheel(universal_wheel, project)
@@ -438,8 +438,6 @@ class PyPiRepository(RemoteRepository):
             if platform_specific_wheels and "sdist" not in urls:
                 # Pick the first wheel available and hope for the best
                 return self._get_info_from_wheel(platform_specific_wheels[0], project)
-            else:
-                print("HERE: should have enter but after change not..")
 
         return self._get_info_from_sdist(urls["sdist"][0], project)
 
@@ -455,7 +453,7 @@ class PyPiRepository(RemoteRepository):
 
         # filename = os.path.basename(urllib.parse.urlparse(url).path.rsplit("/")[-1])
         from poetry.app.relaxed_poetry import rp
-        wheel_archive = rp.artifacts.fetch(project, Link(url), console.io)
+        wheel_archive = rp.artifacts.fetch(project, Link(url), console)
         return PackageInfo.from_wheel(wheel_archive)
 
         # with temporary_directory() as temp_dir:
@@ -477,7 +475,7 @@ class PyPiRepository(RemoteRepository):
         # filename = os.path.basename(urllib.parse.urlparse(url).path)
 
         from poetry.app.relaxed_poetry import rp
-        wheel_archive = rp.artifacts.fetch(project, Link(url), console.io)
+        wheel_archive = rp.artifacts.fetch(project, Link(url), console)
         return PackageInfo.from_sdist(wheel_archive)
 
         # with temporary_directory() as temp_dir:

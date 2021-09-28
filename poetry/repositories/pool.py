@@ -6,12 +6,11 @@ from typing import Optional
 from .base_repository import BaseRepository
 from .exceptions import PackageNotFound
 from .repository import Repository
-from ..managed_project import ManagedProject
-from ..utils.env import Env
 
 if TYPE_CHECKING:
     from poetry.core.packages.dependency import Dependency
     from poetry.core.packages.package import Package
+    from ..managed_project import ManagedProject
 
 
 class Pool(BaseRepository):
@@ -123,8 +122,12 @@ class Pool(BaseRepository):
         raise NotImplementedError()
 
     def package(
-        self, name: str, version: str, project: ManagedProject, extras: List[str] = None, repository: str = None
+        self, name: str, version: str, project: "ManagedProject", extras: List[str] = None, repository: str = None
     ) -> "Package":
+        from poetry.managed_project import  ManagedProject
+        if not isinstance(project, ManagedProject):
+            raise RuntimeError("HERE: ")
+
         if repository is not None:
             repository = repository.lower()
 

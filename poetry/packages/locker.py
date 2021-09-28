@@ -24,7 +24,7 @@ from tomlkit import item
 from tomlkit import table
 from tomlkit.exceptions import TOMLKitError
 
-import poetry.repositories
+import poetry.repositories as repositories
 
 from poetry.core.packages.dependency import Dependency
 from poetry.core.packages.package import Package
@@ -91,17 +91,17 @@ class Locker:
 
     def locked_repository(
             self, with_dev_reqs: bool = False
-    ) -> poetry.repositories.Repository:
+    ) -> repositories.Repository:
         """
         Searches and returns a repository of locked packages.
         """
         from poetry.factory import Factory
 
         if not self.is_locked():
-            return poetry.repositories.Repository()
+            return repositories.Repository()
 
         lock_data = self.lock_data
-        packages = poetry.repositories.Repository()
+        packages = repositories.Repository()
 
         if with_dev_reqs:
             locked_packages = lock_data["package"]

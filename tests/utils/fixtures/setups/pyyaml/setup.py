@@ -154,6 +154,7 @@ class Extension(_Extension):
 
 
 class build_ext(_build_ext):
+    # noinspection PyArgumentList
     def run(self):
         optional = True
         disabled = True

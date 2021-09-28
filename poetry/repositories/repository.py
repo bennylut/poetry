@@ -3,13 +3,13 @@ from typing import List
 from typing import Optional
 
 from .base_repository import BaseRepository
-from ..managed_project import ManagedProject
-from ..utils.env import Env
+
 
 if TYPE_CHECKING:
     from poetry.core.packages.dependency import Dependency
     from poetry.core.packages.package import Package
     from poetry.core.packages.utils.link import Link
+    from poetry.managed_project import ManagedProject
 
 
 class Repository(BaseRepository):
@@ -29,7 +29,7 @@ class Repository(BaseRepository):
         return self._name
 
     def package(
-            self, name: str, version: str, project: ManagedProject, extras: Optional[List[str]] = None
+            self, name: str, version: str, project: "ManagedProject", extras: Optional[List[str]] = None
     ) -> "Package":
         name = name.lower()
 

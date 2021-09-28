@@ -17,7 +17,6 @@ from typing import Optional
 import requests
 import requests.auth
 
-from cachecontrol import CacheControl
 from cachecontrol.caches.file_cache import FileCache
 from cachy import CacheManager
 
@@ -29,8 +28,6 @@ from poetry.core.semver.version_constraint import VersionConstraint
 from poetry.core.semver.version_range import VersionRange
 from poetry.locations import REPOSITORY_CACHE_DIR
 from poetry.utils.helpers import canonicalize_name
-from poetry.utils.helpers import download_file
-from poetry.utils.helpers import temporary_directory
 from poetry.utils.patterns import wheel_file_re
 
 from ..config.config import Config
@@ -40,7 +37,6 @@ from ..utils.authenticator import Authenticator
 from .exceptions import PackageNotFound
 from .exceptions import RepositoryError
 from .pypi_repository import PyPiRepository
-from ..utils.env import Env
 
 if TYPE_CHECKING:
     from poetry.core.packages.dependency import Dependency
@@ -325,10 +321,9 @@ class LegacyRepository(PyPiRepository):
         Note that this will be cached so the subsequent operations
         should be much faster.
         """
+
         try:
-            print(f"Start Downloading {name} {version} (for large packages this may take some time) ...")
             index = self._packages.index(Package(name, version, version))
-            print(f"Done Downloading {name} {version}")
             return self._packages[index]
         except ValueError:
             package = super().package(name, version, project, extras)
