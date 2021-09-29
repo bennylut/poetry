@@ -20,7 +20,6 @@ from poetry.utils.helpers import safe_rmtree
 from poetry.utils.pip import pip_editable_install
 from poetry.utils.pip import pip_install
 
-
 if TYPE_CHECKING:
     from poetry.core.packages.package import Package
 
@@ -45,8 +44,8 @@ class PipInstaller(BaseInstaller):
         args = ["install", "--no-deps"]
 
         if (
-            package.source_type not in {"git", "directory", "file", "url", "sibling"}
-            and package.source_url
+                package.source_type not in {"git", "directory", "file", "url", "sibling"}
+                and package.source_url
         ):
             repository = self._pool.repository(package.source_reference)
             parsed = urllib.parse.urlparse(package.source_url)
@@ -119,7 +118,7 @@ class PipInstaller(BaseInstaller):
 
         # This is a workaround for https://github.com/pypa/pip/issues/4176
         for nspkg_pth_file in self._env.site_packages.find_distribution_nspkg_pth_files(
-            distribution_name=package.name
+                distribution_name=package.name
         ):
             nspkg_pth_file.unlink()
 
@@ -153,7 +152,7 @@ class PipInstaller(BaseInstaller):
             else:
                 req = os.path.realpath(package.source_url)
 
-            if package.develop and package.source_type in ["directory","sibling"] :
+            if package.develop and package.source_type in ["directory", "sibling"]:
                 req = ["-e", req]
 
             return req

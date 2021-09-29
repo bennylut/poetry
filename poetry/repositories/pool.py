@@ -15,10 +15,10 @@ if TYPE_CHECKING:
 
 class Pool(BaseRepository):
     def __init__(
-        self,
-        repositories: Optional[List[Repository]] = None,
-        ignore_repository_names: bool = False,
-        parent: Optional["Pool"] = None,
+            self,
+            repositories: Optional[List[Repository]] = None,
+            ignore_repository_names: bool = False,
+            parent: Optional["Pool"] = None,
     ) -> None:
         if repositories is None:
             repositories = []
@@ -62,7 +62,7 @@ class Pool(BaseRepository):
         raise ValueError(f'Repository "{name}" does not exist.')
 
     def add_repository(
-        self, repository: Repository, default: bool = False, secondary: bool = False
+            self, repository: Repository, default: bool = False, secondary: bool = False
     ) -> "Pool":
         """
         Adds a repository to the pool.
@@ -122,9 +122,9 @@ class Pool(BaseRepository):
         raise NotImplementedError()
 
     def package(
-        self, name: str, version: str, project: "ManagedProject", extras: List[str] = None, repository: str = None
+            self, name: str, version: str, project: "ManagedProject", extras: List[str] = None, repository: str = None
     ) -> "Package":
-        from poetry.managed_project import  ManagedProject
+        from poetry.managed_project import ManagedProject
         if not isinstance(project, ManagedProject):
             raise RuntimeError("HERE: ")
 
@@ -132,9 +132,9 @@ class Pool(BaseRepository):
             repository = repository.lower()
 
         if (
-            repository is not None
-            and repository not in self._lookup
-            and not self._ignore_repository_names
+                repository is not None
+                and repository not in self._lookup
+                and not self._ignore_repository_names
         ):
             if self._parent:
                 return self._parent.package(name, version, project, extras, repository)
@@ -167,9 +167,9 @@ class Pool(BaseRepository):
             repository = repository.lower()
 
         if (
-            repository is not None
-            and repository not in self._lookup
-            and not self._ignore_repository_names
+                repository is not None
+                and repository not in self._lookup
+                and not self._ignore_repository_names
         ):
             if self._parent:
                 return self._parent.find_packages(dependency)

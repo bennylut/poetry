@@ -10,7 +10,6 @@ from .. import console
 
 
 class RemoveCommand(InstallerCommand):
-
     name = "remove"
     description = "Removes a package from the project dependencies."
 
@@ -35,8 +34,9 @@ list of installed packages
 
     def handle(self) -> int:
         if self.poetry.env is None:
-            console.println("<error>This project does not requires python interpreter and therefore cannot have dependencies.</>\n"
-                            "To change that, add a python dependency to <c1>pyproject.toml</c1>")
+            console.println(
+                "<error>This project does not requires python interpreter and therefore cannot have dependencies.</>\n"
+                "To change that, add a python dependency to <c1>pyproject.toml</c1>")
             return 1
 
         packages = self.argument("packages")
@@ -63,8 +63,8 @@ list of installed packages
                 )
 
             for group_name, section in [
-                ("default", poetry_content["dependencies"])
-            ] + group_sections:
+                                           ("default", poetry_content["dependencies"])
+                                       ] + group_sections:
                 removed += self._remove_packages(packages, section, group_name)
                 if group_name != "default":
                     if not section:
@@ -115,7 +115,11 @@ list of installed packages
         self._installer.update(True)
         self._installer.whitelist(removed)
 
-        status = self._installer.run()
+        status = 0
+        try:
+            self._installer.run()
+        except ChildProcessError as e:
+            status = int(str(e))
 
         if not self.option("dry-run") and status == 0:
             self.poetry.file.write(content)
@@ -123,7 +127,7 @@ list of installed packages
         return status
 
     def _remove_packages(
-        self, packages: List[str], section: Dict[str, Any], group_name: str
+            self, packages: List[str], section: Dict[str, Any], group_name: str
     ) -> List[str]:
         removed = []
         group = self.poetry.package.dependency_group(group_name)

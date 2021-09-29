@@ -11,7 +11,6 @@ if TYPE_CHECKING:
 
 
 class EnvInfoCommand(Command):
-
     name = "env info"
     description = "Displays information about the current environment."
 
@@ -22,8 +21,9 @@ class EnvInfoCommand(Command):
         env = self.poetry.env
 
         if env is None:
-            console.println("<error>This project does not requires python interpreter and therefore cannot have virtual-envs.</>\n"
-                            "To change that, add a python dependency to <c1>pyproject.toml</c1>")
+            console.println(
+                "<error>This project does not requires python interpreter and therefore cannot have virtual-envs.</>\n"
+                "To change that, add a python dependency to <c1>pyproject.toml</c1>")
             return 1
 
         if self.option("path"):

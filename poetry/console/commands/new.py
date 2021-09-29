@@ -47,4 +47,3 @@ class NewCommand(Command):
         )
 
         return 0
-

@@ -61,7 +61,8 @@ class EditableBuilder(Builder):
         for removed in self._env.site_packages.remove_distribution_files(
                 distribution_name=self._package.name
         ):
-            console.println(f"  - Removed <c2>{removed.name}</c2> directory from <b>{removed.parent}</b>", Verbosity.DEBUG)
+            console.println(f"  - Removed <c2>{removed.name}</c2> directory from <b>{removed.parent}</b>",
+                            Verbosity.DEBUG)
 
         added_files = []
         added_files += self._add_pth(include_symlinks)

@@ -78,8 +78,9 @@ class AddCommand(InstallerCommand, InitCommand):
     def handle(self) -> int:
 
         if self.poetry.env is None:
-            console.println("<error>This project does not requires python interpreter and therefore cannot have dependencies.</>\n"
-                            "To change that, add a python dependency to <c1>pyproject.toml</c1>")
+            console.println(
+                "<error>This project does not requires python interpreter and therefore cannot have dependencies.</>\n"
+                "To change that, add a python dependency to <c1>pyproject.toml</c1>")
             return 1
 
         from tomlkit import inline_table
@@ -230,7 +231,11 @@ class AddCommand(InstallerCommand, InitCommand):
 
         self._installer.whitelist([r["name"] for r in requirements])
 
-        status = self._installer.run()
+        status = 0
+        try:
+            self._installer.run()
+        except ChildProcessError as e:
+            status = int(str(e))
 
         if status == 0 and not self.option("dry-run"):
             self.poetry.file.write(content)

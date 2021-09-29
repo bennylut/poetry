@@ -122,7 +122,8 @@ class Application(BaseApplication):
     def activate_relaxed_poetry(self, *args) -> None:
         from poetry.app.relaxed_poetry import rp
         from pathlib import Path
-        rp.activate_project(Path.cwd(), self._running_command.name, self.disable_plugins)
+        rp.activate_project(Path.cwd(), self._running_command.name)
+        rp.activate_plugins(self.disable_plugins)
 
     @property
     def poetry(self) -> "ManagedProject":

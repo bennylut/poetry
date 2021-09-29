@@ -4,7 +4,6 @@ from .installer_command import InstallerCommand
 
 
 class InstallCommand(InstallerCommand):
-
     name = "install"
     description = "Installs the project dependencies."
 
@@ -89,7 +88,6 @@ dependencies and not including the current project, run the command with the
         from poetry.core.masonry.utils.module import ModuleOrPackageNotFound
         from poetry.masonry.builders import EditableBuilder
 
-
         extras = []
         for extra in self.option("extras"):
             if " " in extra:
@@ -160,10 +158,10 @@ dependencies and not including the current project, run the command with the
             installer.requires_synchronization(with_synchronization)
             installer.verbose(self._io.is_verbose())
 
-            return_code = installer.run()
-
-            if return_code != 0:
-                return return_code
+            try:
+                installer.run()
+            except ChildProcessError as e:
+                return int(str(e))
 
             if self.option("no-root") or self.option("only"):
                 continue

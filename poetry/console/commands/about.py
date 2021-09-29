@@ -2,7 +2,6 @@ from .command import Command
 
 
 class AboutCommand(Command):
-
     name = "about"
 
     description = "Shows information about Relaxed-Poetry."

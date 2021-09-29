@@ -122,7 +122,7 @@ You can specify a package in the following forms:
         # We create a `pyproject.toml` file based on all the information
         # we have about the current environment.
         if not env_dir.joinpath("pyproject.toml").exists():
-            Factory.create_pyproject_from_package(root_package, env_dir)
+            root_package.create_pyproject(env_dir)
 
         # We add the plugins to the dependencies section of the previously
         # created `pyproject.toml` file

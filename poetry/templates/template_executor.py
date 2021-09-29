@@ -8,7 +8,9 @@ from poetry.core.pyproject.toml import PyProject
 from poetry.core.vcs import Git
 from poetry.core.utils.props_ext import cached_property
 from poetry.core.vcs.git import GitConfig
+# noinspection PyPackageRequirements
 from protopy import doc_generator
+# noinspection PyPackageRequirements
 from protopy.engine import ProtopyEngine
 
 from poetry.console import console

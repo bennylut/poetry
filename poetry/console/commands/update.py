@@ -49,8 +49,9 @@ class UpdateCommand(InstallerCommand):
             # Force update
             poetry.installer.update(True)
 
-            exit_code = poetry.installer.run()
-            if exit_code != 0:
-                return exit_code
+            try:
+                poetry.installer.run()
+            except ChildProcessError as e:
+                return int(str(e))
 
         return 0

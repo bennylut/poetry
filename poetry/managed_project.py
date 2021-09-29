@@ -1,8 +1,10 @@
 from pathlib import Path
-from typing import TYPE_CHECKING, Iterator, Optional
+from typing import TYPE_CHECKING, Iterator, Optional, Union
 from typing import List
 
 from cleo.io.outputs.output import Verbosity
+from poetry.core._vendor.tomlkit import inline_table
+from poetry.core.pyproject.profiles import ProfilesActivationData
 from poetry.core.pyproject.toml import PyProject
 from poetry.core.utils.props_ext import cached_property
 
@@ -42,7 +44,6 @@ class ManagedProject(BasePoetry):
         self._locker = locker
         self._config = config
         self._pool = Pool()
-        self._plugin_manager: Optional["PluginManager"] = None
         self._env = env
 
     @property
@@ -71,7 +72,6 @@ class ManagedProject(BasePoetry):
             if not self.pyproject.is_stored():
                 return None
 
-
             from .utils.env import EnvManager
 
             env_manager = EnvManager(self)
@@ -86,16 +86,18 @@ class ManagedProject(BasePoetry):
     def authenticator(self) -> Authenticator:
         return Authenticator(self.config, console.io)
 
-    @cached_property
-    def installer(self) -> Optional["Installer"]:
-
+    def _create_installer(self, package: "ProjectPackage") -> Optional["Installer"]:
         if self.env is None:
             return None
 
-        installer = Installer(self)
+        installer = Installer(self, package=package)
 
         installer.use_executor(self.config.get("experimental.new-installer", False))
         return installer
+
+    @cached_property
+    def installer(self) -> Optional["Installer"]:
+        return self._create_installer(self.package)
 
     def set_locker(self, locker: "Locker") -> "ManagedProject":
         self._locker = locker
@@ -112,11 +114,6 @@ class ManagedProject(BasePoetry):
 
         return self
 
-    def set_plugin_manager(self, plugin_manager: "PluginManager") -> "ManagedProject":
-        self._plugin_manager = plugin_manager
-
-        return self
-
     def get_sources(self) -> List[Source]:
         return [
             Source(**source)
@@ -125,8 +122,7 @@ class ManagedProject(BasePoetry):
 
     def _load_related_project(self, pyprj: PyProject) -> "ManagedProject":
         from poetry.factory import Factory
-        plugins_disabled = self._plugin_manager.is_plugins_disabled() if self._plugin_manager else True
-        return Factory().create_poetry_for_pyproject(pyprj, disable_plugins=plugins_disabled)
+        return Factory().create_poetry_for_pyproject(pyprj)
 
     def sub_projects(self) -> Iterator["ManagedProject"]:
         if self.pyproject.is_parent():
@@ -141,3 +137,68 @@ class ManagedProject(BasePoetry):
         if parent:
             return self._load_related_project(parent)
         return None
+
+    def install_dependencies(
+            self,
+            dependencies: List[str],
+            *,
+            dry_run: bool = False,
+            allow_prereleases: bool = False,
+            source: Optional[str] = None,
+            optional: bool = False,
+            extras_strings: Optional[List[str]] = None,
+            editable: bool = False,
+            python: Optional[str] = None,
+            platform: Optional[str] = None,
+            group: str = "default"):
+
+        kwargs = {
+            "allow_prereleases": allow_prereleases, "source": source, "optional": optional,
+            "extras_strings": extras_strings, "editable": editable, "python": python, "platform": platform,
+            "group": group
+        }
+
+        from .dependencies.dependency_parser import DependencyParser
+
+        modified_package = self.package.clone()
+
+        dparser = DependencyParser(self)
+        parsed_deps = [dparser.parse(dependency, **kwargs) for dependency in dependencies]
+
+        for parsed_dep in parsed_deps:
+            modified_package.add_dependency(parsed_dep.dependency)
+
+        installer = self._create_installer(modified_package)
+        installer.update(False)
+        installer.dry_run(dry_run)
+
+        repo = installer.run()
+
+        if not dry_run:
+
+            pyprj_deps = self.pyproject.dependencies
+            for parsed_dep in parsed_deps:
+                if isinstance(parsed_dep.constraint, str):
+                    constraint = parsed_dep.constraint
+                    if not parsed_dep.version_specified:
+                        constraint = f"^{repo.find_packages(parsed_dep.dependency)[0].version}"
+                else:
+                    constraint = inline_table()
+                    constraint.update(parsed_dep.constraint)
+                    if not parsed_dep.version_specified:
+                        constraint['version'] = f"^{repo.find_packages(parsed_dep.dependency)[0].version}"
+
+                pyprj_deps[parsed_dep.dependency.name] = constraint
+
+            self.pyproject.save()
+
+            # reload package to reflect changes
+            from poetry.factory import Factory
+            self._package = Factory().create_poetry_for_pyproject(self.pyproject, env=self._env).package
+            self.installer.set_package(self._package)
+
+    @classmethod
+    def load(cls, project_dir: Path, profiles: Optional[ProfilesActivationData] = None):
+        from poetry.factory import Factory
+        # TODO: remove the "factory" class and scatter operations into their appropriate place
+        return Factory().create_poetry(project_dir, profiles=profiles)

@@ -1545,6 +1545,7 @@ class SystemEnv(Env):
         }
 
     def get_pip_version(self) -> Version:
+        # noinspection PyPackageRequirements
         from pip import __version__
 
         return Version.parse(__version__)

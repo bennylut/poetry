@@ -140,7 +140,8 @@ class Locker:
                     for h in lock_data["metadata"]["hashes"][info["name"]]
                 ]
             else:
-                package.files = [{k: v for k, v in file.items()} for file in lock_data["metadata"]["files"][info["name"]]]
+                package.files = [{k: v for k, v in file.items()} for file in
+                                 lock_data["metadata"]["files"][info["name"]]]
 
             package.python_versions = info["python-versions"]
             extras = info.get("extras", {})

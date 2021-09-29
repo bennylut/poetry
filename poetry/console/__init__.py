@@ -72,7 +72,9 @@ class Console(Printer):
 
     def dynamic_line(self, prefix: str = "") -> Printer:
         if not self.is_decorated():
+            self.println(prefix)
             return self
+
         result = DynamicLinePrinter(self._nlines, prefix)
         self.println(prefix)
         return result
@@ -130,10 +132,6 @@ class Console(Printer):
 
 
 console = Console()
-
-
-class ConsoleWidget:
-    ...
 
 
 class DynamicLinePrinter(Printer):

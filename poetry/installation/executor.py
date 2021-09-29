@@ -141,7 +141,8 @@ class Executor:
         self._sections = dict()
 
         for operation in operations:
-            self._sections[id(operation)] = console.dynamic_line(f"  <fg=blue;options=bold>•</> {self.get_operation_message(operation)}: ")
+            self._sections[id(operation)] = console.dynamic_line(
+                f"  <fg=blue;options=bold>•</> {self.get_operation_message(operation)}: ")
 
         for _, group in groups:
             tasks = []

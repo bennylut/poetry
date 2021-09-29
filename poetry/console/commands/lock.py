@@ -5,7 +5,6 @@ from .. import console
 
 
 class LockCommand(InstallerCommand):
-
     name = "lock"
     description = "Locks the project dependencies."
 
@@ -39,14 +38,15 @@ file.
 
             console.println(f"locking project: <c1>{poetry.pyproject.name}</c1>")
 
-            if self.option("check") :
+            if self.option("check"):
                 if not (poetry.locker.is_locked() and poetry.locker.is_fresh()):
                     return 1
             else:
                 poetry.installer.lock(update=not self.option("no-update"))
-                exit_code = poetry.installer.run()
-                if exit_code != 0:
-                    return exit_code
+
+                try:
+                    poetry.installer.run()
+                except ChildProcessError as e:
+                    return int(str(e))
 
         return 0
-

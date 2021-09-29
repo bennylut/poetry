@@ -6,7 +6,6 @@ from .command import Command
 
 
 class ExportCommand(Command):
-
     name = "export"
     description = "Exports the lock file to alternative formats."
 
@@ -32,7 +31,6 @@ class ExportCommand(Command):
     ]
 
     def handle(self) -> int:
-
 
         fmt = self.option("format")
 

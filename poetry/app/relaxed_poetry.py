@@ -7,9 +7,11 @@ from poetry.core.semver.version import Version
 from poetry.core.utils.props_ext import cached_property
 
 from poetry.app.relaxed_poetry_updater import RelaxedPoetryUpdater
+from poetry.config.config import Config
 from poetry.console import console
 from poetry.locations import CONFIG_DIR, CACHE_DIR
 from poetry.managed_project import ManagedProject
+from poetry.plugins.plugin_manager import PluginManager
 from poetry.repositories.artifacts import Artifacts
 from poetry.templates.template_executor import TemplateExecutor
 from poetry.utils.appdirs import user_data_dir
@@ -24,8 +26,19 @@ class RelaxedPoetry:
         self._template_executor = TemplateExecutor(self)
         self._updater = RelaxedPoetryUpdater(self)
         self.artifacts = Artifacts(Path(CACHE_DIR) / "artifacts")
+        self._plugin_manager: Optional[PluginManager] = None
 
-    def activate_project(self, path: Path, command: str = "build", plugins_disabled: bool = False):
+    def activate_plugins(self, disable_plugins: bool = False):
+        if self._plugin_manager:
+            return
+        plugin_manager = PluginManager("plugin", disable_plugins=disable_plugins)
+        plugin_manager.load_plugins()
+        self._plugin_manager = plugin_manager
+
+        if self._active_project:
+            plugin_manager.activate(self._active_project, console.io)
+
+    def activate_project(self, path: Path, command: str = "build"):
 
         from poetry.factory import Factory
         io = console.io
@@ -39,8 +52,12 @@ class RelaxedPoetry:
 
         try:
             self._active_project = Factory().create_poetry(
-                path, io=io, disable_plugins=plugins_disabled, profiles=profile_activation
+                path, profiles=profile_activation
             )
+
+            if self._plugin_manager:
+                self._plugin_manager.activate(self._active_project)
+
         except RuntimeError as err:
             if command != "new":
                 raise FileNotFoundError("could not find project to activate") from err
@@ -51,6 +68,10 @@ class RelaxedPoetry:
     @property
     def active_project(self) -> ManagedProject:
         return self._active_project
+
+    @cached_property
+    def config(self) -> Config:
+        return Config.load_global()
 
     def execute_template(
             self, descriptor: str, out_path: Path,

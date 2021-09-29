@@ -54,7 +54,7 @@ class Solver:
         self._printer = printer or console
 
         if provider is None:
-            provider = Provider(project)
+            provider = Provider(project, package=self._package)
 
         self._provider = provider
         self._overrides = []

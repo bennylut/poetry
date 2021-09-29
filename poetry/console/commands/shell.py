@@ -8,7 +8,6 @@ from .. import console
 
 
 class ShellCommand(EnvCommand):
-
     name = "shell"
     description = "Spawns a shell within the virtual environment."
 
@@ -20,8 +19,10 @@ If one doesn't exist yet, it will be created.
     def handle(self) -> int:
 
         if self.poetry.env is None:
-            console.println("<error>This project does not requires python interpreter and therefore does not have a virtual-envs.</>\n"
-                            "To change that, add a python dependency to <c1>pyproject.toml</c1>")
+            console.println(
+                "<error>This project does not requires python interpreter "
+                "and therefore does not have a virtual-envs.</>\n"
+                "To change that, add a python dependency to <c1>pyproject.toml</c1>")
             return 1
 
         from poetry.utils.shell import Shell

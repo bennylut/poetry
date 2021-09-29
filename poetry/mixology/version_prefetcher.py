@@ -7,6 +7,7 @@ from poetry.core.packages.dependency import Dependency
 from poetry.mixology import VersionSolver
 from poetry.packages import DependencyPackage
 
+
 class VersionPrefetcher:
 
     def __init__(self, version_solver: VersionSolver, max_workers=6):

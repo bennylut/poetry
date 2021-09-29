@@ -8,11 +8,15 @@ from typing import Callable
 from typing import Dict
 from typing import Optional
 
-from poetry.locations import CACHE_DIR
+from cleo.io.outputs.output import Verbosity
+from poetry.core.toml.file import TOMLFile
+
+from poetry.locations import CACHE_DIR, CONFIG_DIR
 
 from .config_source import ConfigSource
 from .dict_config_source import DictConfigSource
-
+from .file_config_source import FileConfigSource
+from ..console import console
 
 _NOT_SET = object()
 
@@ -148,3 +152,25 @@ class Config:
             return lambda val: str(Path(val))
 
         return lambda val: val
+
+    @classmethod
+    def load_global(cls):
+        config = Config()
+
+        # Load global config
+        config_file = TOMLFile(Path(CONFIG_DIR) / "config.toml")
+        if config_file.exists():
+            console.println(f"<debug>Loading configuration file {config_file.path}</debug>", Verbosity.DEBUG)
+            config.merge(config_file.read())
+
+        config.set_config_source(FileConfigSource(config_file))
+
+        # Load global auth config
+        auth_config_file = TOMLFile(Path(CONFIG_DIR) / "auth.toml")
+        if auth_config_file.exists():
+            console.println(f"<debug>Loading configuration file {auth_config_file.path}</debug>", Verbosity.DEBUG)
+            config.merge(auth_config_file.read())
+
+        config.set_auth_config_source(FileConfigSource(auth_config_file))
+
+        return config

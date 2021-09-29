@@ -14,11 +14,11 @@ if TYPE_CHECKING:
 
 class Transaction:
     def __init__(
-        self,
-        current_packages: List["Package"],
-        result_packages: List[Tuple["Package", int]],
-        installed_packages: Optional[List["Package"]] = None,
-        root_package: Optional["Package"] = None,
+            self,
+            current_packages: List["Package"],
+            result_packages: List[Tuple["Package", int]],
+            installed_packages: Optional[List["Package"]] = None,
+            root_package: Optional["Package"] = None,
     ) -> None:
         self._current_packages = current_packages
         self._result_packages = result_packages
@@ -30,7 +30,7 @@ class Transaction:
         self._root_package = root_package
 
     def calculate_operations(
-        self, with_uninstalls: bool = True, synchronize: bool = False
+            self, with_uninstalls: bool = True, synchronize: bool = False
     ) -> List["OperationTypes"]:
         from poetry.installation.operations.install import Install
         from poetry.installation.operations.uninstall import Uninstall
@@ -50,8 +50,8 @@ class Transaction:
                             Update(installed_package, result_package, priority=priority)
                         )
                     elif (
-                        installed_package.source_type
-                        or result_package.source_type != "legacy"
+                            installed_package.source_type
+                            or result_package.source_type != "legacy"
                     ) and not result_package.is_same_package_as(installed_package):
                         operations.append(
                             Update(installed_package, result_package, priority=priority)
@@ -88,15 +88,15 @@ class Transaction:
                 # to avoid externally managed virtual environments causing unnecessary
                 # removals.
                 preserved_package_names = {
-                    "pip",
-                    "setuptools",
-                    "wheel",
-                } - current_package_names
+                                              "pip",
+                                              "setuptools",
+                                              "wheel",
+                                          } - current_package_names
 
                 for installed_package in self._installed_packages:
                     if (
-                        self._root_package
-                        and installed_package.name == self._root_package.name
+                            self._root_package
+                            and installed_package.name == self._root_package.name
                     ):
                         continue
 
@@ -123,5 +123,7 @@ class Transaction:
                 old_bounds = bounds
                 bounds = bounds.intersect(op.package.python_constraint)
                 if old_bounds != bounds:
-                    console.println(f"  - Python bounds changed because of package <c1>{op.package.name}</c1> from <c2>{old_bounds}</c2> to <c2>{bounds}</>")
+                    console.println(
+                        f"  - Python bounds changed because of package <c1>{op.package.name}</c1> "
+                        f"from <c2>{old_bounds}</c2> to <c2>{bounds}</>")
         return bounds

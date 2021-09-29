@@ -35,11 +35,12 @@ class Installer:
             project: "ManagedProject",
             installed: Union[Repository, None] = None,
             executor: Optional[Executor] = None,
+            package: Optional[ProjectPackage] = None
     ):
 
         self._project = project
         self._env = project.env
-        self._package = project.package
+        self._package : ProjectPackage = package or project.package
         self._locker = project.locker
         self._pool = project.pool
 
@@ -89,7 +90,7 @@ class Installer:
 
         return self
 
-    def run(self) -> int:
+    def run(self) -> Repository:
         # Check if refresh
         if not self._update and self._lock and self._locker.is_locked():
             return self._do_refresh()
@@ -105,7 +106,10 @@ class Installer:
 
         local_repo = Repository()
 
-        return self._do_install(local_repo)
+        result = self._do_install(local_repo)
+        if result != 0:
+            raise ChildProcessError(str(result))
+        return local_repo
 
     def dry_run(self, dry_run: bool = True) -> "Installer":
         self._dry_run = dry_run
@@ -188,7 +192,7 @@ class Installer:
 
         return self
 
-    def _do_refresh(self) -> int:
+    def _do_refresh(self) -> Repository:
         from poetry.puzzle import Solver
 
         # Checking extras
@@ -210,7 +214,7 @@ class Installer:
 
         self._write_lock_file(local_repo.packages, force=True)
 
-        return 0
+        return local_repo
 
     def _do_install(self, local_repo: Repository) -> int:
         from poetry.puzzle import Solver
@@ -323,7 +327,6 @@ class Installer:
 
         if len(out_of_lock_file_ops) > 0:
             self._populate_local_repo(local_repo, out_of_lock_file_ops)
-            # self._write_lock_file(local_repo, force=True)
 
         if not self._requires_synchronization:
             # If no packages synchronisation has been requested we need
@@ -359,6 +362,9 @@ class Installer:
         return self._execute(ops)
 
     def _write_lock_file(self, packages: List[Package], force: bool = True) -> None:
+        if self.is_dry_run():
+            return
+
         if force or (self._update and self._write_lock):
             updated_lock = self._locker.set_lock_data(self._package, packages)
 

@@ -376,7 +376,6 @@ class LegacyRepository(PyPiRepository):
 
             file_hash = f"{link.hash_name}:{link.hash}" if link.hash else None
 
-
             files.append({"file": link.filename, "hash": file_hash})
 
         data.files = files
@@ -418,9 +417,8 @@ class LegacyRepository(PyPiRepository):
     # def _download(self, url, dest):  # type: (str, str) -> None
     #     from poetry.app.relaxed_poetry import rp
     #     rp.artifacts.fetch()
-        # print(f"HERE: download {url}")
-        # try:
-        #     return download_file(url, dest, session=self.session)
-        # finally:
-        #     print(f"HERE: done download {url}")
-
+    # print(f"HERE: download {url}")
+    # try:
+    #     return download_file(url, dest, session=self.session)
+    # finally:
+    #     print(f"HERE: done download {url}")

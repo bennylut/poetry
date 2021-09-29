@@ -46,6 +46,7 @@ from poetry.utils.helpers import temporary_directory
 logger = logging.getLogger(__name__)
 
 from typing import TYPE_CHECKING
+
 if TYPE_CHECKING:
     from poetry.managed_project import ManagedProject
 

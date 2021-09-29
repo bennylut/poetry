@@ -94,7 +94,6 @@ class RelaxedPoetryUpdater:
                 "so it cannot be updated automatically."
             )
 
-
         env = self._installation_env
         from poetry.__version__ import __version__
 
@@ -118,7 +117,7 @@ class RelaxedPoetryUpdater:
         # console.println()
         #
         # self.add_packages(f"relaxed-poetry {release}", dry_run=dry_run)
-        # self._make_bin()
+        self._make_bin()
         #
         # console.println(f"<c1>Relaxed-Poetry</c1> (<c2>{release.version}</c2>) is installed now. Great!")
         # console.println()
@@ -187,4 +186,3 @@ class RelaxedPoetryUpdater:
     # def has_package(self, package: str, constraint: str = "*") -> bool:
     #     ir: InstalledRepository = self._installed_repository
     #     return len(ir.find_packages(Dependency(package, constraint))) > 0
-

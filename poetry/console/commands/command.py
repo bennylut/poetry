@@ -3,8 +3,6 @@ from typing import Optional
 
 from cleo.commands.command import Command as BaseCommand
 
-
-
 if TYPE_CHECKING:
     from poetry.console.application import Application
     from poetry.managed_project import ManagedProject

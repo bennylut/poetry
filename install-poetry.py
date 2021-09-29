@@ -541,8 +541,8 @@ class Installer:
         script = "rp"
         target_script = "venv/bin/poetry"
         if WINDOWS:
-            script = "poetry.exe"
-            target_script = "venv/Scripts/poetry.exe"
+            script = "rp.exe"
+            target_script = "venv/Scripts/rp.exe"
 
         if self._bin_dir.joinpath(script).exists():
             self._bin_dir.joinpath(script).unlink()
