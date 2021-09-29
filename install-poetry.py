@@ -491,7 +491,7 @@ class Installer:
             self._write("Removing {}".format(colorize("info", "Relaxed Poetry")))
 
         shutil.rmtree(str(self._data_dir))
-        for script in ["poetry", "poetry.bat"]:
+        for script in ["rp", "rp.bat"]:
             if self._bin_dir.joinpath(script).exists():
                 self._bin_dir.joinpath(script).unlink()
 
@@ -539,7 +539,7 @@ class Installer:
         self._bin_dir.mkdir(parents=True, exist_ok=True)
 
         script = "rp"
-        target_script = "venv/bin/poetry"
+        target_script = "venv/bin/rp"
         if WINDOWS:
             script = "rp.exe"
             target_script = "venv/Scripts/rp.exe"
@@ -614,7 +614,7 @@ class Installer:
                 poetry=colorize("info", "Relaxed-Poetry"),
                 version=colorize("b", version),
                 RP_HOME_bin=colorize("comment", self._bin_dir),
-                poetry_executable=colorize("b", self._bin_dir.joinpath("poetry")),
+                poetry_executable=colorize("b", self._bin_dir.joinpath("rp")),
                 configure_message=POST_MESSAGE_CONFIGURE_WINDOWS.format(
                     RP_HOME_bin=colorize("comment", self._bin_dir)
                 ),
@@ -645,7 +645,7 @@ class Installer:
                 poetry=colorize("info", "Relaxed-Poetry"),
                 version=colorize("b", version),
                 RP_HOME_bin=colorize("comment", self._bin_dir),
-                poetry_executable=colorize("b", self._bin_dir.joinpath("poetry")),
+                poetry_executable=colorize("b", self._bin_dir.joinpath("rp")),
                 configure_message=POST_MESSAGE_CONFIGURE_FISH.format(
                     RP_HOME_bin=colorize("comment", self._bin_dir)
                 ),
@@ -665,7 +665,7 @@ class Installer:
                 poetry=colorize("info", "Relaxed-Poetry"),
                 version=colorize("b", version),
                 RP_HOME_bin=colorize("comment", self._bin_dir),
-                poetry_executable=colorize("b", self._bin_dir.joinpath("poetry")),
+                poetry_executable=colorize("b", self._bin_dir.joinpath("rp")),
                 configure_message=POST_MESSAGE_CONFIGURE_UNIX.format(
                     RP_HOME_bin=colorize("comment", self._bin_dir)
                 ),
