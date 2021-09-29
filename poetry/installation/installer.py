@@ -250,15 +250,15 @@ class Installer:
 
             locked_repository = self._locker.locked_repository(True)
 
-            if not self._locker.is_fresh():
-                console.println(
-                    "<warning>"
-                    "Warning: The lock file is not up to date with "
-                    "the latest changes in pyproject.toml. "
-                    "You may be getting outdated dependencies. "
-                    "Run update to update them."
-                    "</warning>"
-                )
+            # if not self._locker.is_fresh():
+            #     console.println(
+            #         "<warning>"
+            #         "Warning: The lock file is not up to date with "
+            #         "the latest changes in pyproject.toml. "
+            #         "You may be getting outdated dependencies. "
+            #         "Run update to update them."
+            #         "</warning>"
+            #     )
 
             for extra in self._extras:
                 if extra not in self._locker.lock_data.get("extras", {}):

@@ -1,205 +1,69 @@
-from cleo.helpers import option
+from poetry.console import console
+from poetry.console.commands.command import Command
 
-from .installer_command import InstallerCommand
 
+class InstallCommand(Command):
+    """
+    install project dependencies
 
-class InstallCommand(InstallerCommand):
-    name = "install"
-    description = "Installs the project dependencies."
+    install
+        {--with=* : The optional dependency groups to include for installation. }
+        {--sync : Synchronize the environment with the locked packages and the specified groups.}
+        {--dry-run : Output the operations but do not execute anything (implicitly enables --verbose).}
+        {--extras=* : Extra sets of dependencies to install.}
+        {--update : update the given packages to the last compatible version }
+        {--save-to=default : the group to store the packages in }
+        {--lock-only : Do not perform operations (only update the lockfile). }
+        {--editable : Add vcs/path dependencies as editable.}
+        {--optional : add packages as an optional dependencies. }
+        {--python= : Python version for which the dependency must be installed. }
+        {--platform= : Platforms for which the dependency must be installed. }
+        {--source= : Name of the source to use to install the package.}
+        {--allow-prereleases : Accept prereleases.}
+        {packages?* : The packages to add. }
+    """
 
-    options = [
-        option(
-            "without",
-            None,
-            "The dependency groups to ignore for installation.",
-            flag=False,
-            multiple=True,
-        ),
-        option(
-            "with",
-            None,
-            "The optional dependency groups to include for installation.",
-            flag=False,
-            multiple=True,
-        ),
-        option("default", None, "Only install the default dependencies."),
-        option(
-            "only",
-            None,
-            "The only dependency groups to install.",
-            flag=False,
-            multiple=True,
-        ),
-        option(
-            "no-dev",
-            None,
-            "Do not install the development dependencies. (<warning>Deprecated</warning>)",
-        ),
-        option(
-            "dev-only",
-            None,
-            "Only install the development dependencies. (<warning>Deprecated</warning>)",
-        ),
-        option(
-            "sync",
-            None,
-            "Synchronize the environment with the locked packages and the specified groups.",
-        ),
-        option(
-            "no-root", None, "Do not install the root package (the current project)."
-        ),
-        option(
-            "dry-run",
-            None,
-            "Output the operations but do not execute anything "
-            "(implicitly enables --verbose).",
-        ),
-        option(
-            "remove-untracked",
-            None,
-            "Removes packages not present in the lock file.",
-        ),
-        option(
-            "extras",
-            "E",
-            "Extra sets of dependencies to install.",
-            flag=False,
-            multiple=True,
-        ),
-    ]
+    help = """
+    install project dependencies
+    If you do not specify a version constraint, rp will choose a suitable one based on the available package versions.
 
-    help = """The <info>install</info> command reads the <comment>etc/rp/lock.toml</> file from
-the current directory, processes it, and downloads and installs all the
-libraries and dependencies outlined in that file. If the file does not
-exist it will look for <comment>pyproject.toml</> and do the same.
-
-<info>poetry install</info>
-
-By default, the above command will also install the current project. To install only the
-dependencies and not including the current project, run the command with the
-<info>--no-root</info> option like below:
-
-<info> poetry install --no-root</info>
-"""
-
-    _loggers = ["poetry.repositories.pypi_repository", "poetry.inspection.info"]
+    You can specify a package in the following forms:
+      - A single name (<b>requests</b>)
+      - A name and a constraint (<b>requests@^2.23.0</b>)
+      - A git url (<b>git+https://github.com/python-poetry/poetry.git</b>)
+      - A git url with a revision (<b>git+https://github.com/python-poetry/poetry.git#develop</b>)
+      - A git SSH url (<b>git+ssh://github.com/python-poetry/poetry.git</b>)
+      - A git SSH url with a revision (<b>git+ssh://github.com/python-poetry/poetry.git#develop</b>)
+      - A file path (<b>../my-package/my-package.whl</b>)
+      - A directory (<b>../my-package/</b>)
+      - A url (<b>https://example.com/packages/my-package-0.1.0.tar.gz</b>)
+    """
 
     def handle(self) -> int:
-        from poetry.core.masonry.utils.module import ModuleOrPackageNotFound
-        from poetry.masonry.builders import EditableBuilder
+        from poetry.app.relaxed_poetry import rp
 
-        extras = []
-        for extra in self.option("extras"):
-            if " " in extra:
-                extras += [e.strip() for e in extra.split(" ")]
-            else:
-                extras.append(extra)
+        project = rp.active_project
+        if not project.env:
+            console.println(
+                "<error>This project does not requires python interpreter and therefore cannot have dependencies.</>\n"
+                "To change that, add a python dependency to <c1>pyproject.toml</c1>")
+            return 1
 
-        excluded_groups = []
-        included_groups = []
-        only_groups = []
-        if self.option("no-dev"):
-            self.line(
-                "<warning>The `<fg=yellow;options=bold>--no-dev</>` option is deprecated, "
-                "use the `<fg=yellow;options=bold>--without dev</>` notation instead.</warning>"
-            )
-            excluded_groups.append("dev")
-        elif self.option("dev-only"):
-            self.line(
-                "<warning>The `<fg=yellow;options=bold>--dev-only</>` option is deprecated, "
-                "use the `<fg=yellow;options=bold>--only dev</>` notation instead.</warning>"
-            )
-            only_groups.append("dev")
-
-        excluded_groups.extend(
-            [
-                group.strip()
-                for groups in self.option("without")
-                for group in groups.split(",")
-            ]
+        project.install_dependencies(
+            self.argument("packages"),
+            with_groups=self.option("with"),
+            synchronize=self.option("sync"),
+            dry_run=self.option("dry-run"),
+            extras_strings=self.option("extras"),
+            update=self.option("update"),
+            group=self.option("save-to"),
+            lock_only=self.option("lock-only"),
+            editable=self.option("editable"),
+            optional=self.option("optional"),
+            python=self.option("python"),
+            platform=self.option("platform"),
+            source=self.option("source"),
+            allow_prereleases=self.option("allow-prereleases")
         )
-        included_groups.extend(
-            [
-                group.strip()
-                for groups in self.option("with")
-                for group in groups.split(",")
-            ]
-        )
-        only_groups.extend(
-            [
-                group.strip()
-                for groups in self.option("only")
-                for group in groups.split(",")
-            ]
-        )
-
-        if self.option("default"):
-            only_groups.append("default")
-
-        with_synchronization = self.option("sync")
-        if self.option("remove-untracked"):
-            self.line(
-                "<warning>The `<fg=yellow;options=bold>--remove-untracked</>` option is deprecated, "
-                "use the `<fg=yellow;options=bold>--sync</>` option instead.</warning>"
-            )
-
-            with_synchronization = True
-
-        for poetry in self.poetry.sub_projects():
-            installer = poetry.installer
-            if not installer:
-                continue
-
-            installer.extras(extras)
-            installer.only_groups(only_groups)
-            installer.without_groups(excluded_groups)
-            installer.with_groups(included_groups)
-            installer.dry_run(self.option("dry-run"))
-            installer.requires_synchronization(with_synchronization)
-            installer.verbose(self._io.is_verbose())
-
-            try:
-                installer.run()
-            except ChildProcessError as e:
-                return int(str(e))
-
-            if self.option("no-root") or self.option("only"):
-                continue
-
-            try:
-                builder = EditableBuilder(poetry, poetry.env, self._io)
-            except ModuleOrPackageNotFound:
-                # This is likely due to the fact that the project is an application
-                # not following the structure expected by Poetry
-                # If this is a true error it will be picked up later by build anyway.
-                continue
-
-            self.line("")
-            if not self._io.output.is_decorated() or self.io.is_debug():
-                self.line(
-                    "<b>Installing</> project: <c1>{}</c1> (<c2>{}</c2>)".format(
-                        poetry.package.pretty_name, poetry.package.pretty_version
-                    )
-                )
-            else:
-                self.write(
-                    "<b>Installing</> project: <c1>{}</c1> (<c2>{}</c2>)".format(
-                        poetry.package.pretty_name, poetry.package.pretty_version
-                    )
-                )
-
-            if self.option("dry-run"):
-                self.line("")
-                continue
-
-            builder.build()
-
-            if self._io.output.is_decorated() and not self.io.is_debug():
-                self.overwrite(
-                    "<b>Installing</> project: <c1>{}</c1> (<success>{}</success>)".format(
-                        poetry.package.pretty_name, poetry.package.pretty_version
-                    )
-                )
-                self.line("")
 
         return 0

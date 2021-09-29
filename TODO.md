@@ -2,7 +2,6 @@
 - pprm, ppkm, ppbm
 - cache everything (git repos, and urls too)
 - remove layout
-- merge install and add
 - remove installer and add env managers (+self env)
 - handle the "remove package cookiecutter" bug
 - move toml namespace from poetry to relaxed-poetry

@@ -17,6 +17,7 @@ All of the changes that were made in this fork are documented in the wiki, the f
 - Project and other components scaffolding using [protopy](https://github.com/bennylut/protopy)
 - property definition and substitution in pyproject 
 - automatic and manual build profiles (override groups of properties in pyproject)
+- install, update and add are merged into a single (install) command
  
 See wiki for further details.
 

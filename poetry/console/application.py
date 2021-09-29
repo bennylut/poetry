@@ -49,7 +49,6 @@ def load_command(name: str) -> Callable:
 
 COMMANDS = [
     "about",
-    "add",
     "build",
     "check",
     "config",
@@ -64,7 +63,6 @@ COMMANDS = [
     "search",
     "shell",
     "show",
-    "update",
     "version",
     # Cache commands
     "cache clear",

@@ -4,6 +4,7 @@ from typing import List
 
 from cleo.io.outputs.output import Verbosity
 from poetry.core._vendor.tomlkit import inline_table
+from poetry.core.packages.dependency import Dependency
 from poetry.core.pyproject.profiles import ProfilesActivationData
 from poetry.core.pyproject.toml import PyProject
 from poetry.core.utils.props_ext import cached_property
@@ -139,17 +140,10 @@ class ManagedProject(BasePoetry):
         return None
 
     def install_dependencies(
-            self,
-            dependencies: List[str],
-            *,
-            dry_run: bool = False,
-            allow_prereleases: bool = False,
-            source: Optional[str] = None,
-            optional: bool = False,
-            extras_strings: Optional[List[str]] = None,
-            editable: bool = False,
-            python: Optional[str] = None,
-            platform: Optional[str] = None,
+            self, dependencies: List[str], *, with_groups: Optional[List[str]] = None, synchronize: bool = False,
+            lock_only: bool = False, update: bool = False, dry_run: bool = False, allow_prereleases: bool = False,
+            source: Optional[str] = None, optional: bool = False, extras_strings: Optional[List[str]] = None,
+            editable: bool = False, python: Optional[str] = None, platform: Optional[str] = None,
             group: str = "default"):
 
         kwargs = {
@@ -165,12 +159,34 @@ class ManagedProject(BasePoetry):
         dparser = DependencyParser(self)
         parsed_deps = [dparser.parse(dependency, **kwargs) for dependency in dependencies]
 
+        existing_dependencies = {dependency.name: dependency for dependency in modified_package.all_requires}
         for parsed_dep in parsed_deps:
+            if parsed_dep.dependency.name in existing_dependencies:
+                if update:
+                    existing_dependency: Dependency = existing_dependencies[parsed_dep.dependency.name]
+                    for group in existing_dependency.groups:
+                        modified_package.dependency_group(group).remove_dependency(existing_dependency.name)
+                else:
+                    if parsed_dep.constraint != '*':
+                        raise ValueError(
+                            f"dependency {parsed_dep.dependency.name} already exists in pyproject, if you want to change it re-run with --update")
+                    continue  # dont add the dependency - it is already set
+
             modified_package.add_dependency(parsed_dep.dependency)
 
         installer = self._create_installer(modified_package)
-        installer.update(False)
         installer.dry_run(dry_run)
+        if lock_only:
+            installer.lock(update)
+        else:
+            installer.update(update)
+
+        if len(dependencies) == 0 and extras_strings:
+            installer.extras(extras_strings)
+
+        installer.requires_synchronization(synchronize)
+        if with_groups:
+            installer.with_groups(with_groups)
 
         repo = installer.run()
 
