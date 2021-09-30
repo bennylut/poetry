@@ -16,6 +16,7 @@ from poetry.repositories.artifacts import Artifacts
 from poetry.templates.template_executor import TemplateExecutor
 from poetry.utils.appdirs import user_data_dir
 from poetry.__version__ import __version__
+from poetry.utils.authenticator import Authenticator
 
 
 class RelaxedPoetry:
@@ -72,6 +73,10 @@ class RelaxedPoetry:
     @cached_property
     def config(self) -> Config:
         return Config.load_global()
+
+    @cached_property
+    def authenticator(self) -> Authenticator:
+        return Authenticator(self.config, console.io)
 
     def execute_template(
             self, descriptor: str, out_path: Path,

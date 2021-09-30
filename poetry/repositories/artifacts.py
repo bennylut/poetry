@@ -10,6 +10,7 @@ from poetry.core.packages.utils.link import Link
 from poetry.console import Printer, NullPrinter
 from poetry.installation.chooser import Wheel, InvalidWheelName
 from poetry.managed_project import ManagedProject
+from poetry.utils.authenticator import Authenticator
 
 _ARCHIVE_TYPES = {".whl", ".tar.gz", ".tar.bz2", ".bz2", ".zip"}
 
@@ -27,31 +28,38 @@ class Artifacts:
 
         return self._workspace / pack_dir / ver_dir / link_hash
 
-    def fetch(self, project: ManagedProject, link: Link, io: Printer = NullPrinter,
+    def fetch(self, link: Union[Link, str], authenticator: Optional[Authenticator], io: Printer = NullPrinter,
               package: Optional[Package] = None) -> Path:
 
-        cached = self._lookup_cache(project, link)
+        if isinstance(link, str):
+            link = Link(link)
+
+        cached = self._lookup_cache(link)
         if cached is not None:
             return cached
 
-        cached = self._download_archive(project, link, io)
+        cached = self._download_archive(authenticator, link, io)
         if package is not None:
             self._validate_hash(cached, package, io)
         return cached
 
-    def _download_archive(self, project: ManagedProject, link: Link, io: Printer) -> Path:
-        response = project.authenticator.request("get", link.url, stream=True, io=io)
+    def _download_archive(self, authenticator: Optional[Authenticator], link: Link, printer: Printer) -> Path:
+        if not authenticator:
+            from poetry.app.relaxed_poetry import rp
+            authenticator = rp.authenticator
+
+        response = authenticator.request("get", link.url, stream=True, io=printer.as_output())
         wheel_size = response.headers.get("content-length")
 
         message = f"<info>Downloading {link.filename}...</>"
         progress = None
-        if io.is_decorated():
+        if printer.is_decorated():
             if wheel_size is None:
-                io.println(message)
+                printer.println(message)
             else:
                 from cleo.ui.progress_bar import ProgressBar
 
-                progress = ProgressBar(io.dynamic_line().as_output(), max=int(wheel_size))
+                progress = ProgressBar(printer.dynamic_line().as_output(), max=int(wheel_size))
                 progress.set_format(message + " <b>%percent%%</b>")
 
         if progress:
@@ -79,32 +87,37 @@ class Artifacts:
 
         return archive
 
-    def _lookup_cache(self, project: ManagedProject, link: Link) -> Optional[Path]:
+    def _lookup_cache(self, link: Link) -> Optional[Path]:
         cache_dir = self._cache_dir_of(link)
+        cached_file = cache_dir / link.filename
 
-        if cache_dir.exists():
-            candidates = []
-            for archive in cache_dir.iterdir():
-                if archive.suffix in _ARCHIVE_TYPES and archive.with_suffix('.success').exists():
-                    if archive.suffix != '.whl':
-                        candidates.append((float("inf"), archive))
-                    else:
-                        try:
-                            wheel = Wheel(archive.name)
-                        except InvalidWheelName:
-                            continue
-
-                        if not wheel.is_supported_by_environment(project.env):
-                            continue
-
-                        candidates.append(
-                            (wheel.get_minimum_supported_index(project.env.supported_tags), archive),
-                        )
-
-            if len(candidates) > 0:
-                return min(candidates)[1]
-
+        if cached_file.with_suffix(".success").exists():
+            return cached_file
         return None
+        #
+        # if cache_dir.exists():
+        #     candidates = []
+        #     for archive in cache_dir.iterdir():
+        #         if archive.suffix in _ARCHIVE_TYPES and archive.with_suffix('.success').exists():
+        #             if archive.suffix != '.whl':
+        #                 candidates.append((float("inf"), archive))
+        #             else:
+        #                 try:
+        #                     wheel = Wheel(archive.name)
+        #                 except InvalidWheelName:
+        #                     continue
+        #
+        #                 if not wheel.is_supported_by_environment(project.env):
+        #                     continue
+        #
+        #                 candidates.append(
+        #                     (wheel.get_minimum_supported_index(project.env.supported_tags), archive),
+        #                 )
+        #
+        #     if len(candidates) > 0:
+        #         return min(candidates)[1]
+        #
+        # return None
 
     def _validate_hash(self, artifact: Path, package: Package, io: Printer):
         if package.files:

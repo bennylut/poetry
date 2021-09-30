@@ -550,7 +550,8 @@ class Executor:
     def _download_link(self, operation: Union[Install, Update], link: Link) -> Link:
         from poetry.app.relaxed_poetry import rp
         archive = rp.artifacts.fetch(
-            self._project, link,
+            link,
+            self._project.authenticator,
             self._sections[id(operation)] if self.supports_fancy_output() else console,
             operation.package
         )

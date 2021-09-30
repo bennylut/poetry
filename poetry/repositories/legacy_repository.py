@@ -7,9 +7,8 @@ import warnings
 
 from collections import defaultdict
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, MutableMapping
 from typing import Any
-from typing import Dict
 from typing import Iterator
 from typing import List
 from typing import Optional
@@ -17,7 +16,6 @@ from typing import Optional
 import requests
 import requests.auth
 
-from cachecontrol.caches.file_cache import FileCache
 from cachy import CacheManager
 
 from poetry.core.packages.package import Package
@@ -33,6 +31,7 @@ from poetry.utils.patterns import wheel_file_re
 from ..config.config import Config
 from ..inspection.info import PackageInfo
 from ..managed_project import ManagedProject
+from ..utils import http
 from ..utils.authenticator import Authenticator
 from .exceptions import PackageNotFound
 from .exceptions import RepositoryError
@@ -75,7 +74,7 @@ class Page:
         ".tar",
     ]
 
-    def __init__(self, url: str, content: str, headers: Dict[str, Any]) -> None:
+    def __init__(self, url: str, content: bytes, headers: MutableMapping[str, Any]) -> None:
         if not url.endswith("/"):
             url += "/"
 
@@ -196,20 +195,22 @@ class LegacyRepository(PyPiRepository):
             config=config or Config(use_environment=True)
         )
 
-        self._cache_control_cache = FileCache(str(self._cache_dir / "_http"))
-        self._tl = threading.local()
+        self._request_auth_args = {}
+
+        # self._cache_control_cache = FileCache(str(self._cache_dir / "_http"))
+        # self._tl = threading.local()
 
         username, password = self._authenticator.get_credentials_for_url(self._url)
         if username is not None and password is not None:
-            self._authenticator.session.auth = requests.auth.HTTPBasicAuth(
+            self._request_auth_args["auth"] = requests.auth.HTTPBasicAuth(
                 username, password
             )
 
         if self._cert:
-            self._authenticator.session.verify = str(self._cert)
+            self._request_auth_args["verify"]  = str(self._cert)
 
         if self._client_cert:
-            self._authenticator.session.cert = str(self._client_cert)
+            self._request_auth_args["cert"]  = str(self._client_cert)
 
         self._disable_cache = disable_cache
 
@@ -223,15 +224,17 @@ class LegacyRepository(PyPiRepository):
 
     @property
     def authenticated_url(self) -> str:
-        if not self.session.auth:
+        auth = self._request_auth_args.get("auth")
+
+        if not auth:
             return self.url
 
         parsed = urllib.parse.urlparse(self.url)
 
         return "{scheme}://{username}:{password}@{netloc}{path}".format(
             scheme=parsed.scheme,
-            username=quote(self.session.auth.username, safe=""),
-            password=quote(self.session.auth.password, safe=""),
+            username=quote(auth.username, safe=""),
+            password=quote(auth.password, safe=""),
             netloc=parsed.netloc,
             path=parsed.path,
         )
@@ -390,8 +393,10 @@ class LegacyRepository(PyPiRepository):
 
     def _get(self, endpoint: str) -> Optional[Page]:
         url = self._url + endpoint
+        session = http.cached_session(True)
+
         try:
-            response = self.session.get(url)
+            response = session.get(url, **self._request_auth_args)
             if response.status_code in (401, 403):
                 self._log(
                     f"Authorization error accessing {url}",

@@ -39,9 +39,7 @@ from poetry.packages.package_collection import PackageCollection
 from poetry.puzzle.exceptions import OverrideNeeded
 from poetry.repositories import Pool
 from poetry.utils.env import Env
-from poetry.utils.helpers import download_file
 from poetry.utils.helpers import safe_rmtree
-from poetry.utils.helpers import temporary_directory
 
 logger = logging.getLogger(__name__)
 
@@ -378,12 +376,16 @@ class Provider:
 
     @classmethod
     def get_package_from_url(cls, url: str) -> Package:
-        with temporary_directory() as temp_dir:
-            temp_dir = Path(temp_dir)
-            file_name = os.path.basename(urllib.parse.urlparse(url).path)
-            download_file(url, str(temp_dir / file_name))
+        from poetry.app.relaxed_poetry import rp
+        file = rp.artifacts.fetch(url)
+        package = cls.get_package_from_file(file)
 
-            package = cls.get_package_from_file(temp_dir / file_name)
+        # with temporary_directory() as temp_dir:
+        #     temp_dir = Path(temp_dir)
+        #     file_name = os.path.basename(urllib.parse.urlparse(url).path)
+        #     download_file(url, str(temp_dir / file_name))
+        #
+        #     package = cls.get_package_from_file(temp_dir / file_name)
 
         package.source_type = "url"
         package._source_url = url

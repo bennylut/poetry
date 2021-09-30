@@ -18,12 +18,10 @@ import requests
 from poetry.config.config import Config
 from poetry.core.packages.package import Package
 
-
 try:
     from collections.abc import Mapping
 except ImportError:
     from collections import Mapping
-
 
 _canonicalize_regex = re.compile("[-_]+")
 
@@ -89,25 +87,25 @@ def merge_dicts(d1: Dict, d2: Dict) -> None:
             d1[k] = d2[k]
 
 
-def download_file(
-    url: str,
-    dest: str,
-    session: Optional[requests.Session] = None,
-    chunk_size: int = 1024,
-) -> None:
-    get = requests.get if not session else session.get
-
-    with get(url, stream=True) as response:
-        response.raise_for_status()
-
-        with open(dest, "wb") as f:
-            for chunk in response.iter_content(chunk_size=chunk_size):
-                if chunk:
-                    f.write(chunk)
-
+# def download_file(
+#         url: str,
+#         dest: str,
+#         session: Optional[requests.Session] = None,
+#         chunk_size: int = 1024,
+# ) -> None:
+#     get = requests.get if not session else session.get
+#
+#     with get(url, stream=True) as response:
+#         response.raise_for_status()
+#
+#         with open(dest, "wb") as f:
+#             for chunk in response.iter_content(chunk_size=chunk_size):
+#                 if chunk:
+#                     f.write(chunk)
+#
 
 def get_package_version_display_string(
-    package: Package, root: Optional[Path] = None
+        package: Package, root: Optional[Path] = None
 ) -> str:
     if package.source_type in ["file", "directory", "sibling"] and root:
         return "{} {}".format(

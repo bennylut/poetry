@@ -1,18 +1,13 @@
 import logging
-import threading
 import urllib.parse
 from collections import defaultdict
-from typing import Dict, Optional
+from typing import Dict
 from typing import List
-from typing import TYPE_CHECKING
 from typing import Union
 
 import requests
-from cachecontrol import CacheControl
-from cachecontrol.caches.file_cache import FileCache
 from cachecontrol.controller import logger as cache_control_logger
 from cachy import CacheManager
-from cleo.io.outputs.output import Verbosity
 from html5lib.html5parser import parse
 from poetry.core.packages.dependency import Dependency
 from poetry.core.packages.package import Package
@@ -25,13 +20,12 @@ from poetry.core.version.markers import parse_marker
 
 from poetry.locations import REPOSITORY_CACHE_DIR
 from poetry.utils._compat import to_str
-from poetry.utils.helpers import download_file
-from poetry.utils.helpers import temporary_directory
 from poetry.utils.patterns import wheel_file_re
 from .exceptions import PackageNotFound
 from .remote_repository import RemoteRepository
 from ..console import console
 from ..managed_project import ManagedProject
+from ..utils import http
 
 cache_control_logger.setLevel(logging.ERROR)
 
@@ -67,21 +61,9 @@ class PyPiRepository(RemoteRepository):
             }
         )
 
-        self._cache_control_cache = FileCache(str(release_cache_dir / "_http"))
-        self._tl = threading.local()
 
         self._name = "PyPI"
 
-    @property
-    def session(self) -> CacheControl:
-        try:
-            return self._tl.session
-        except AttributeError:
-            self._tl.session = CacheControl(
-                requests.session(), cache=self._cache_control_cache
-            )
-
-            return self._tl.session
 
     def find_packages(self, dependency: Dependency) -> List[Package]:
         """
@@ -170,7 +152,7 @@ class PyPiRepository(RemoteRepository):
 
         search = {"q": query}
 
-        response = requests.session().get(self._base_url + "search", params=search)
+        response = http.session().get(self._base_url + "search", params=search, **self._request_auth_args)
         content = parse(response.content, namespaceHTMLElements=False)
         for result in content.findall(".//*[@class='package-snippet']"):
             name = result.find("h3/*[@class='package-snippet__name']").text
@@ -305,13 +287,16 @@ class PyPiRepository(RemoteRepository):
         return links
 
     def _get(self, endpoint: str) -> Union[dict, None]:
+
+        session = http.cached_session(True)
+
         try:
-            json_response = self.session.get(self._base_url + endpoint)
+            json_response = session.get(self._base_url + endpoint)
         except requests.exceptions.TooManyRedirects:
             # Cache control redirect loop.
             # We try to remove the cache and try again
-            self._cache_control_cache.delete(self._base_url + endpoint)
-            json_response = self.session.get(self._base_url + endpoint)
+            http.remove_persistent_cache(self._base_url + endpoint)
+            json_response = session.get(self._base_url + endpoint)
 
         if json_response.status_code == 404:
             return None
@@ -432,17 +417,12 @@ class PyPiRepository(RemoteRepository):
 
             # filename = os.path.basename(urllib.parse.urlparse(url).path.rsplit("/")[-1])
             from poetry.app.relaxed_poetry import rp
-            wheel_archive = rp.artifacts.fetch(project, Link(url), console)
+            wheel_archive = rp.artifacts.fetch(Link(url), authenticator=project.authenticator, io=console)
 
             return PackageInfo.from_wheel(wheel_archive).asdict()
 
         return PackageInfo.load(self._cache.remember_forever(f"wheels/{url}", get_info))
 
-        # with temporary_directory() as temp_dir:
-        #     filepath = Path(temp_dir) / filename
-        #     self._download(url, str(filepath))
-        #
-        #     return PackageInfo.from_wheel(filepath)
 
     def _get_info_from_sdist(self, url: str, project: ManagedProject) -> "PackageInfo":
 
@@ -459,19 +439,10 @@ class PyPiRepository(RemoteRepository):
             # filename = os.path.basename(urllib.parse.urlparse(url).path)
 
             from poetry.app.relaxed_poetry import rp
-            wheel_archive = rp.artifacts.fetch(project, Link(url), console)
+            wheel_archive = rp.artifacts.fetch(Link(url), authenticator=project.authenticator, io=console)
             return PackageInfo.from_sdist(wheel_archive).asdict()
 
         return PackageInfo.load(self._cache.remember_forever(f"sdists/{url}", get_info))
-
-        # with temporary_directory() as temp_dir:
-        #     filepath = Path(temp_dir) / filename
-        #     self._download(url, str(filepath))
-        #
-        #     return PackageInfo.from_sdist(filepath)
-
-    # def _download(self, url: str, dest: str) -> None:
-    #     return download_file(url, dest, session=self.session)
 
     def _log(self, msg: str, level: str = "info") -> None:
         getattr(logger, level)(f"<debug>{self._name}:</debug> {msg}")

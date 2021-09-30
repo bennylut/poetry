@@ -13,6 +13,7 @@ import requests.auth
 import requests.exceptions
 
 from poetry.exceptions import PoetryException
+from poetry.utils import http
 from poetry.utils.password_manager import PasswordManager
 
 
@@ -29,7 +30,6 @@ class Authenticator:
     def __init__(self, config: "Config", io: Optional["IO"] = None) -> None:
         self._config = config
         self._io = io
-        self._session = None
         self._credentials = {}
         self._password_manager = PasswordManager(self._config)
 
@@ -43,12 +43,6 @@ class Authenticator:
         else:
             getattr(logger, level, logger.debug)(message)
 
-    @property
-    def session(self) -> requests.Session:
-        if self._session is None:
-            self._session = requests.Session()
-
-        return self._session
 
     def request(self, method: str, url: str, **kwargs: Any) -> requests.Response:
         request = requests.Request(method, url)
@@ -57,7 +51,7 @@ class Authenticator:
         if username is not None and password is not None:
             request = requests.auth.HTTPBasicAuth(username, password)(request)
 
-        session = self.session
+        session = http.session()
         prepared_request = session.prepare_request(request)
 
         proxies = kwargs.get("proxies", {})
