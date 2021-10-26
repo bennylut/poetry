@@ -3,13 +3,10 @@ import threading
 from pathlib import Path
 from typing import Optional, Union
 
+from poetry.console import Printer, NullPrinter
 from poetry.core.packages.file_dependency import FileDependency
 from poetry.core.packages.package import Package
 from poetry.core.packages.utils.link import Link
-
-from poetry.console import Printer, NullPrinter
-from poetry.installation.chooser import Wheel, InvalidWheelName
-from poetry.managed_project import ManagedProject
 from poetry.utils.authenticator import Authenticator
 
 _ARCHIVE_TYPES = {".whl", ".tar.gz", ".tar.bz2", ".bz2", ".zip"}

@@ -1,86 +1,31 @@
-from contextlib import contextmanager
-from typing import TYPE_CHECKING
+from pathlib import Path
 from typing import Any
-from typing import Iterator
 
-from tomlkit import document
-from tomlkit import table
+from poetry.core.utils import toml
+from poetry.core.utils.collections import nested_dict_set, nested_dict_del
 
 from .config_source import ConfigSource
 
 
-if TYPE_CHECKING:
-    from tomlkit.toml_document import TOMLDocument
-
-    from poetry.core.toml.file import TOMLFile
-
-
 class FileConfigSource(ConfigSource):
-    def __init__(self, file: "TOMLFile", auth_config: bool = False) -> None:
+    def __init__(self, file: Path, auth_config: bool = False) -> None:
         self._file = file
         self._auth_config = auth_config
 
     @property
     def name(self) -> str:
-        return str(self._file.path)
+        return str(self._file)
 
     @property
-    def file(self) -> "TOMLFile":
+    def file(self) -> Path:
         return self._file
 
     def add_property(self, key: str, value: Any) -> None:
-        with self.secure() as config:
-            keys = key.split(".")
-
-            for i, key in enumerate(keys):
-                if key not in config and i < len(keys) - 1:
-                    config[key] = table()
-
-                if i == len(keys) - 1:
-                    config[key] = value
-                    break
-
-                config = config[key]
+        data, dumps = toml.load(self._file)
+        nested_dict_set(data, toml.key2path(key), value)
+        self._file.write_text(dumps(data))
 
     def remove_property(self, key: str) -> None:
-        with self.secure() as config:
-            keys = key.split(".")
-
-            current_config = config
-            for i, key in enumerate(keys):
-                if key not in current_config:
-                    return
-
-                if i == len(keys) - 1:
-                    del current_config[key]
-
-                    break
-
-                current_config = current_config[key]
-
-    @contextmanager
-    def secure(self) -> Iterator["TOMLDocument"]:
-        if self.file.exists():
-            initial_config = self.file.read()
-            config = self.file.read()
-        else:
-            initial_config = document()
-            config = document()
-
-        new_file = not self.file.exists()
-
-        yield config
-
-        try:
-            # Ensuring the file is only readable and writable
-            # by the current user
-            mode = 0o600
-
-            if new_file:
-                self.file.touch(mode=mode)
-
-            self.file.write(config)
-        except Exception:
-            self.file.write(initial_config)
-
-            raise
+        data, dumps = toml.load(self._file)
+        nested_dict_del(data, toml.key2path(key))
+        self._file.write_text(dumps(data))

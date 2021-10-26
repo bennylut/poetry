@@ -7,9 +7,10 @@ from typing import cast
 
 from cleo.helpers import argument
 from cleo.helpers import option
+from poetry.core.utils import toml
+from poetry.core.utils.collections import nested_dict_set
 
 from ..init import InitCommand
-
 
 if TYPE_CHECKING:
     from poetry.console.application import Application  # noqa
@@ -17,7 +18,6 @@ if TYPE_CHECKING:
 
 
 class PluginAddCommand(InitCommand):
-
     name = "plugin add"
 
     description = "Adds new plugins."
@@ -57,12 +57,10 @@ You can specify a package in the following forms:
     def handle(self) -> int:
         from pathlib import Path
 
-        import tomlkit
-
         from cleo.io.inputs.string_input import StringInput
         from cleo.io.io import IO
 
-        from poetry.core.pyproject.toml import PyProject
+        from poetry.core.pyproject.project import Project
         from poetry.core.semver.helpers import parse_constraint
         from poetry.factory import Factory
         from poetry.packages.project_package import ProjectPackage
@@ -80,7 +78,7 @@ You can specify a package in the following forms:
 
         # We check for the plugins existence first.
         if env_dir.joinpath("pyproject.toml").exists():
-            pyproject = tomlkit.loads(
+            pyproject, _ = toml.loads(
                 env_dir.joinpath("pyproject.toml").read_text(encoding="utf-8")
             )
             poetry_content = pyproject["tool"]["poetry"]
@@ -126,16 +124,16 @@ You can specify a package in the following forms:
 
         # We add the plugins to the dependencies section of the previously
         # created `pyproject.toml` file
-        pyproject = PyProject.read(env_dir.joinpath("pyproject.toml"), None)
-        poetry_content = pyproject.poetry_config
-        poetry_dependency_section = poetry_content["dependencies"]
+        pyproject = Project.read(env_dir.joinpath("pyproject.toml"), None)
+        # poetry_content = pyproject.poetry_config
+        new_dependencies = {}
         plugin_names = []
         for plugin in plugins:
             if "version" in plugin:
                 # Validate version constraint
                 parse_constraint(plugin["version"])
 
-            constraint = tomlkit.inline_table()
+            constraint = {}
             for name, value in plugin.items():
                 if name == "name":
                     continue
@@ -145,15 +143,17 @@ You can specify a package in the following forms:
             if len(constraint) == 1 and "version" in constraint:
                 constraint = constraint["version"]
 
-            poetry_dependency_section[plugin["name"]] = constraint
+            new_dependencies[plugin["name"]] = constraint
             plugin_names.append(plugin["name"])
 
-        pyproject.save()
+        with pyproject.edit() as data:
+            nested_dict_set(data, ['tool', 'poetry', 'dependencies'], new_dependencies)
 
         # From this point forward, all the logic will be deferred to
         # the update command, by using the previously created `pyproject.toml`
         # file.
-        application = cast("Application", self.application)
+        from poetry.console.application import Application
+        application = cast(Application, self.application)
         update_command: "UpdateCommand" = cast(
             "UpdateCommand", application.find("update")
         )
@@ -176,7 +176,7 @@ You can specify a package in the following forms:
         )
 
     def get_existing_packages_from_input(
-        self, packages: List[str], poetry_content: Dict, target_section: str
+            self, packages: List[str], poetry_content: Dict, target_section: str
     ) -> List[str]:
         existing_packages = []
 

@@ -6,7 +6,7 @@ import re
 from copy import deepcopy
 from hashlib import sha256
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import Any
 from typing import Dict
 from typing import Iterable
 from typing import Iterator
@@ -17,12 +17,7 @@ from typing import Set
 from typing import Tuple
 from typing import Union
 
-from tomlkit import array
-from tomlkit import document
-from tomlkit import inline_table
-from tomlkit import item
-from tomlkit import table
-from tomlkit.exceptions import TOMLKitError
+from poetry.core.utils import toml
 
 import poetry.repositories as repositories
 
@@ -30,14 +25,10 @@ from poetry.core.packages.dependency import Dependency
 from poetry.core.packages.package import Package
 from poetry.core.semver.helpers import parse_constraint
 from poetry.core.semver.version import Version
-from poetry.core.toml.file import TOMLFile
 from poetry.core.version.markers import parse_marker
 from poetry.core.version.requirements import InvalidRequirement
 from poetry.packages import DependencyPackage
 from poetry.utils.extras import get_extra_package_names
-
-if TYPE_CHECKING:
-    from tomlkit.toml_document import TOMLDocument
 
 logger = logging.getLogger(__name__)
 
@@ -48,21 +39,21 @@ class Locker:
     _relevant_keys = ["dependencies", "group", "source", "extras"]
 
     def __init__(self, lock: Union[str, Path], local_config: dict) -> None:
-        self._lock = TOMLFile(lock)
+        self._lock = Path(lock)
         self._local_config = local_config
         self._lock_data = None
         self._content_hash = self._get_content_hash()
 
-        lock_dir = self._lock.path.parent
+        lock_dir = self._lock.parent
         if not lock_dir.exists():
             lock_dir.mkdir(parents=True)
 
     @property
-    def lock(self) -> TOMLFile:
+    def lock(self) -> Path:
         return self._lock
 
     @property
-    def lock_data(self) -> "TOMLDocument":
+    def lock_data(self) -> Dict[str, Any]:
         if self._lock_data is None:
             self._lock_data = self._get_lock_data()
 
@@ -81,7 +72,7 @@ class Locker:
         """
         Checks whether the lock file is still up to date with the current hash.
         """
-        lock = self._lock.read()
+        lock, _ = toml.load(self._lock)
         metadata = lock.get("metadata", {})
 
         if "content-hash" in metadata:
@@ -107,18 +98,19 @@ class Locker:
             locked_packages = lock_data["package"]
         else:
             locked_packages = [
-                p for p in lock_data["package"] if p["category"] == "main"
+                p for p in lock_data["package"]
             ]
 
         if not locked_packages:
             return packages
+
 
         for info in locked_packages:
             source = info.get("source", {})
             source_type = source.get("type")
             url = source.get("url")
             if source_type in ["directory", "file", "sibling"]:
-                url = self._lock.path.parent.joinpath(url).resolve().as_posix()
+                url = self._lock.parent.joinpath(url).resolve().as_posix()
 
             package = Package(
                 info["name"],
@@ -130,8 +122,6 @@ class Locker:
                 source_resolved_reference=source.get("resolved_reference"),
             )
             package.description = info.get("description", "")
-            package.category = info.get("category", "main")
-            package.groups = info.get("groups", ["default"])
             package.optional = info["optional"]
             if "hashes" in lock_data["metadata"]:
                 # Old lock so we create dummy files from the hashes
@@ -181,7 +171,7 @@ class Locker:
 
             for dep_name, constraint in info.get("dependencies", {}).items():
 
-                root_dir = self._lock.path.parent
+                root_dir = self._lock.parent
                 if package.source_type in ["directory", "sibling"]:
                     # root dir should be the source of the package relative to the lock path
                     root_dir = Path(package.source_url)
@@ -401,7 +391,7 @@ class Locker:
             yield DependencyPackage(dependency=dependency, package=package)
 
     def set_lock_data(self, root: Package, packages: List[Package]) -> bool:
-        files = table()
+        files = {}
         packages = self._lock_packages(packages)
         # Retrieving hashes
         for package in packages:
@@ -409,19 +399,16 @@ class Locker:
                 files[package["name"]] = []
 
             for f in package["files"]:
-                file_metadata = inline_table()
+                file_metadata = {}
                 for k, v in sorted(f.items()):
                     if v is not None:
                         file_metadata[k] = v
 
                 files[package["name"]].append(file_metadata)
 
-            if files[package["name"]]:
-                files[package["name"]] = item(files[package["name"]]).multiline(True)
-
             del package["files"]
 
-        lock = document()
+        lock = {}
         lock["package"] = packages
 
         if root.extras:
@@ -446,13 +433,8 @@ class Locker:
 
         return False
 
-    def _write_lock_data(self, data: "TOMLDocument") -> None:
-        self.lock.write(data)
-
-        # Checking lock file data consistency
-        if data != self.lock.read():
-            raise RuntimeError("Inconsistent lock file data.")
-
+    def _write_lock_data(self, data: Dict[str, Any]) -> None:
+        self.lock.write_text(toml.dumps(data))
         self._lock_data = None
 
     def _get_content_hash(self) -> str:
@@ -471,14 +453,11 @@ class Locker:
 
         return content_hash
 
-    def _get_lock_data(self) -> "TOMLDocument":
+    def _get_lock_data(self) -> Dict[str, Any]:
         if not self._lock.exists():
             raise RuntimeError("No lockfile found. Unable to read locked packages")
 
-        try:
-            lock_data = self._lock.read()
-        except TOMLKitError as e:
-            raise RuntimeError(f"Unable to read the lock file ({e}).")
+        lock_data, _ = toml.load(self._lock)
 
         lock_version = Version.parse(lock_data["metadata"].get("lock-version", "1.0"))
         current_version = Version.parse(self._VERSION)
@@ -519,7 +498,7 @@ class Locker:
             if dependency.pretty_name not in dependencies:
                 dependencies[dependency.pretty_name] = []
 
-            constraint = inline_table()
+            constraint = {}
 
             if dependency.is_directory() or dependency.is_file():
                 constraint["path"] = dependency.path.as_posix()
@@ -562,25 +541,22 @@ class Locker:
                     constraint["version"] for constraint in constraints
                 ]
 
-        data = dict(
-            [
-                ("name", package.pretty_name),
-                ("version", package.pretty_version),
-                ("description", package.description or ""),
-                ("category", package.category),
-                ("optional", package.optional),
-                ("python-versions", package.python_versions),
-                ("files", sorted(package.files, key=lambda x: x["file"])),
-            ]
-        )
+        data : Dict[str, Any] = {
+            "name": package.pretty_name,
+            "version": package.pretty_version,
+            "description": package.description or "",
+            "optional": package.optional,
+            "python-versions": package.python_versions,
+            "files": sorted(package.files, key=lambda x: x["file"])
+        }
 
         if dependencies:
-            data["dependencies"] = table()
+            data["dependencies"] = {}
             for k, constraints in dependencies.items():
                 if len(constraints) == 1:
                     data["dependencies"][k] = constraints[0]
                 else:
-                    data["dependencies"][k] = array().multiline(True)
+                    data["dependencies"][k] = []
                     for constraint in constraints:
                         data["dependencies"][k].append(constraint)
 
@@ -602,7 +578,7 @@ class Locker:
                 # The lock file should only store paths relative to the root project
                 url = Path(
                     os.path.relpath(
-                        Path(url).as_posix(), self._lock.path.parent.as_posix()
+                        Path(url).as_posix(), self._lock.parent.as_posix()
                     )
                 ).as_posix()
 

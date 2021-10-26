@@ -1,9 +1,8 @@
-from typing import TYPE_CHECKING, Optional
 from typing import Dict
 from typing import List
+from typing import TYPE_CHECKING
 
 from .version_solver import VersionSolver
-from ..console import Printer
 
 if TYPE_CHECKING:
     from poetry.core.packages.project_package import ProjectPackage

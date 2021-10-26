@@ -1,20 +1,16 @@
 import enum
 import time
-
 from collections import defaultdict
 from contextlib import contextmanager
-from typing import TYPE_CHECKING
 from typing import Callable
 from typing import Dict
-from typing import FrozenSet
 from typing import List
 from typing import Optional
+from typing import TYPE_CHECKING, Iterable
 from typing import Tuple
 from typing import Union
 
-
 from poetry.core.packages.package import Package
-
 from poetry.mixology import resolve_version
 from poetry.mixology.failure import SolveFailure
 from poetry.packages import DependencyPackage
@@ -180,9 +176,12 @@ class Solver:
         return final_packages, depths
 
 
+_NODE_ID_T = Union[str, Tuple[str, bool]]
+
+
 class DFSNode:
     def __init__(
-            self, id: Tuple[str, FrozenSet[str], bool], name: str, base_name: str
+            self, id: _NODE_ID_T, name: str, base_name: str
     ) -> None:
         self.id = id
         self.name = name
@@ -235,8 +234,8 @@ def depth_first_search(
 
 def dfs_visit(
         node: "PackageNode",
-        back_edges: Dict[str, List["PackageNode"]],
-        visited: Dict[str, VisitedState],
+        back_edges: Dict[_NODE_ID_T, List["PackageNode"]],
+        visited: Dict[_NODE_ID_T, VisitedState],
         sorted_nodes: List["PackageNode"],
 ) -> bool:
     if visited.get(node.id, VisitedState.Unvisited) == VisitedState.Visited:
@@ -293,16 +292,12 @@ class PackageNode(DFSNode):
         self.depth = -1
 
         if not previous:
-            self.category = "dev"
-            self.groups = frozenset()
             self.optional = True
         else:
-            self.category = "main" if "default" in dep.groups else "dev"
-            self.groups = dep.groups
             self.optional = dep.is_optional()
 
         super().__init__(
-            (package.complete_name, self.groups, self.optional),
+            (package.complete_name, self.optional),
             package.complete_name,
             package.name,
         )
@@ -343,7 +338,6 @@ class PackageNode(DFSNode):
                     # we merge the requirements
                     if any(
                             child.package.name == pkg.name
-                            and child.groups == dependency.groups
                             for child in children
                     ):
                         continue
@@ -361,7 +355,7 @@ class PackageNode(DFSNode):
 
         return children
 
-    def visit(self, parents: "PackageNode") -> None:
+    def visit(self, parents: Iterable["PackageNode"]) -> None:
         # The root package, which has no parents, is defined as having depth -1
         # So that the root package's top-level dependencies have depth 0.
         self.depth = 1 + max(
@@ -378,20 +372,12 @@ def aggregate_package_nodes(
 ) -> Tuple[Package, int]:
     package = nodes[0].package
     depth = max(node.depth for node in nodes)
-    groups = []
-    for node in nodes:
-        groups.extend(node.groups)
 
-    category = (
-        "main" if any("default" in node.groups for node in children + nodes) else "dev"
-    )
     optional = all(node.optional for node in children + nodes)
     for node in nodes:
         node.depth = depth
-        node.category = category
         node.optional = optional
 
-    package.category = category
     package.optional = optional
 
     return package, depth

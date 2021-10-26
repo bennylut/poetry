@@ -9,7 +9,7 @@ from typing import Dict
 from typing import Optional
 
 from cleo.io.outputs.output import Verbosity
-from poetry.core.toml.file import TOMLFile
+from poetry.core.utils import toml
 
 from poetry.locations import CACHE_DIR, CONFIG_DIR
 
@@ -30,7 +30,6 @@ def boolean_normalizer(val: str) -> bool:
 
 
 class Config:
-
     default_config = {
         "cache-dir": str(CACHE_DIR),
         "virtualenvs": {
@@ -45,7 +44,7 @@ class Config:
     }
 
     def __init__(
-        self, use_environment: bool = True, base_dir: Optional[Path] = None
+            self, use_environment: bool = True, base_dir: Optional[Path] = None
     ) -> None:
         self._config = deepcopy(self.default_config)
         self._use_environment = use_environment
@@ -53,9 +52,9 @@ class Config:
         self._config_source = DictConfigSource()
         self._auth_config_source = DictConfigSource()
 
-    @property
-    def name(self) -> str:
-        return str(self._file.path)
+    # @property
+    # def name(self) -> str:
+    #     return str(self._file.path)
 
     @property
     def config(self) -> Dict:
@@ -158,18 +157,20 @@ class Config:
         config = Config()
 
         # Load global config
-        config_file = TOMLFile(Path(CONFIG_DIR) / "config.toml")
+        config_file = Path(CONFIG_DIR) / "config.toml"
         if config_file.exists():
-            console.println(f"<debug>Loading configuration file {config_file.path}</debug>", Verbosity.DEBUG)
-            config.merge(config_file.read())
+            console.println(f"<debug>Loading configuration file {config_file}</debug>", Verbosity.DEBUG)
+            config_data, _ = toml.load(config_file)
+            config.merge(config_data)
 
         config.set_config_source(FileConfigSource(config_file))
 
         # Load global auth config
-        auth_config_file = TOMLFile(Path(CONFIG_DIR) / "auth.toml")
+        auth_config_file = Path(CONFIG_DIR) / "auth.toml"
         if auth_config_file.exists():
-            console.println(f"<debug>Loading configuration file {auth_config_file.path}</debug>", Verbosity.DEBUG)
-            config.merge(auth_config_file.read())
+            console.println(f"<debug>Loading configuration file {auth_config_file}</debug>", Verbosity.DEBUG)
+            config_data, _ = toml.load(auth_config_file)
+            config.merge(config_data)
 
         config.set_auth_config_source(FileConfigSource(auth_config_file))
 

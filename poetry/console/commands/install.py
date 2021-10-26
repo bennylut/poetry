@@ -7,12 +7,10 @@ class InstallCommand(Command):
     install project dependencies
 
     install
-        {--with=* : The optional dependency groups to include for installation. }
         {--sync : Synchronize the environment with the locked packages and the specified groups.}
         {--dry-run : Output the operations but do not execute anything (implicitly enables --verbose).}
         {--extras=* : Extra sets of dependencies to install.}
         {--update : update the given packages to the last compatible version }
-        {--save-to=default : the group to store the packages in }
         {--lock-only : Do not perform operations (only update the lockfile). }
         {--editable : Add vcs/path dependencies as editable.}
         {--optional : add packages as an optional dependencies. }
@@ -51,12 +49,10 @@ class InstallCommand(Command):
 
         project.install_dependencies(
             self.argument("packages"),
-            with_groups=self.option("with"),
             synchronize=self.option("sync"),
             dry_run=self.option("dry-run"),
             extras_strings=self.option("extras"),
             update=self.option("update"),
-            group=self.option("save-to"),
             lock_only=self.option("lock-only"),
             editable=self.option("editable"),
             optional=self.option("optional"),

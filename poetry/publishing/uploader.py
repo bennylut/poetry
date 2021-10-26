@@ -27,11 +27,9 @@ from poetry.core.masonry.utils.helpers import escape_version
 from poetry.core.utils.helpers import normalize_version
 from poetry.utils.patterns import wheel_file_re
 
-
 if TYPE_CHECKING:
-    from cleo.io.null_io import NullIO
-
     from poetry.managed_project import ManagedProject
+    from cleo.io.io import IO
 
 _has_blake2 = hasattr(hashlib, "blake2b")
 
@@ -53,7 +51,7 @@ class UploadError(Exception):
 
 
 class Uploader:
-    def __init__(self, poetry: "ManagedProject", io: "NullIO") -> None:
+    def __init__(self, poetry: "ManagedProject", io: "IO") -> None:
         self._poetry = poetry
         self._package = poetry.package
         self._io = io
@@ -108,11 +106,11 @@ class Uploader:
         return self._username is not None and self._password is not None
 
     def upload(
-        self,
-        url: str,
-        cert: Optional[Path] = None,
-        client_cert: Optional[Path] = None,
-        dry_run: bool = False,
+            self,
+            url: str,
+            cert: Optional[Path] = None,
+            client_cert: Optional[Path] = None,
+            dry_run: bool = False,
     ) -> None:
         session = self.make_session()
 
@@ -132,6 +130,7 @@ class Uploader:
 
         file_type = self._get_type(file)
 
+        blake2_256_hash = None
         if _has_blake2:
             blake2_256_hash = hashlib.blake2b(digest_size=256 // 8)
 
@@ -206,14 +205,14 @@ class Uploader:
         return data
 
     def _upload(
-        self, session: requests.Session, url: str, dry_run: Optional[bool] = False
+            self, session: requests.Session, url: str, dry_run: Optional[bool] = False
     ) -> None:
         try:
             self._do_upload(session, url, dry_run)
         except HTTPError as e:
             if (
-                e.response.status_code == 400
-                and "was ever registered" in e.response.text
+                    e.response.status_code == 400
+                    and "was ever registered" in e.response.text
             ):
                 try:
                     self._register(session, url)
@@ -223,7 +222,7 @@ class Uploader:
             raise UploadError(e)
 
     def _do_upload(
-        self, session: requests.Session, url: str, dry_run: Optional[bool] = False
+            self, session: requests.Session, url: str, dry_run: Optional[bool] = False
     ) -> None:
         for file in self.files:
             # TODO: Check existence
@@ -234,11 +233,11 @@ class Uploader:
                 resp.raise_for_status()
 
     def _upload_file(
-        self,
-        session: requests.Session,
-        url: str,
-        file: Path,
-        dry_run: Optional[bool] = False,
+            self,
+            session: requests.Session,
+            url: str,
+            file: Path,
+            dry_run: Optional[bool] = False,
     ) -> requests.Response:
         from cleo.ui.progress_bar import ProgressBar
 
@@ -307,8 +306,8 @@ class Uploader:
         """
         dist = self._poetry.file.parent / "dist"
         file = (
-            dist
-            / f"{self._package.name}-{normalize_version(self._package.version.text)}.tar.gz"
+                dist
+                / f"{self._package.name}-{normalize_version(self._package.version.text)}.tar.gz"
         )
 
         if not file.exists():

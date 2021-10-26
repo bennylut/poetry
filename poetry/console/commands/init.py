@@ -12,8 +12,6 @@ from typing import Tuple
 from typing import Union
 
 from cleo.helpers import option
-from tomlkit import inline_table
-from tomlkit.toml_document import TOMLDocument
 
 from .command import Command
 from .env_command import EnvCommand
@@ -65,7 +63,7 @@ The <c1>init</c1> command creates a basic <comment>pyproject.toml</> file in the
     def handle(self) -> int:
         from pathlib import Path
 
-        from poetry.core.pyproject.toml import PyProject
+        from poetry.core.pyproject.project import Project
         from poetry.core.vcs.git import GitConfig
         from poetry.layouts import layout
         from poetry.utils.env import SystemEnv
@@ -74,7 +72,7 @@ The <c1>init</c1> command creates a basic <comment>pyproject.toml</> file in the
         # pyproject = PyProjectTOML(Path.cwd() / "pyproject.toml")
 
         if pyproject_file.exists():
-            pyproject = PyProject.read(pyproject_file, None)
+            pyproject = Project.read(pyproject_file, None)
             if pyproject.is_poetry_project():
                 self.line(
                     "<error>A pyproject.toml file with a poetry section already exists.</error>"
@@ -87,7 +85,7 @@ The <c1>init</c1> command creates a basic <comment>pyproject.toml</> file in the
                 )
                 return 1
         else:
-            pyproject = PyProject(pyproject_file, TOMLDocument(), None)
+            pyproject = Project.create(pyproject_file)
 
         vcs_config = GitConfig()
 
@@ -527,8 +525,7 @@ The <c1>init</c1> command creates a basic <comment>pyproject.toml</> file in the
             if "version" in requirement and len(requirement) == 1:
                 constraint = requirement["version"]
             else:
-                constraint = inline_table()
-                constraint.trivia.trail = "\n"
+                constraint = {}
                 constraint.update(requirement)
 
             requires[name] = constraint

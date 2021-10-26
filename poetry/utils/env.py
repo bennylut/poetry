@@ -18,6 +18,7 @@ from subprocess import CalledProcessError
 
 from typing import TYPE_CHECKING, Set
 
+from poetry.core.utils import toml
 from poetry.core.utils.props_ext import cached_property
 
 if TYPE_CHECKING:
@@ -34,7 +35,6 @@ from typing import Tuple
 from typing import Union
 
 import packaging.tags
-import tomlkit
 import virtualenv
 
 from cleo.io.io import IO
@@ -46,7 +46,6 @@ from virtualenv.seed.wheels.embed import get_embed_wheel
 
 from poetry.core.semver.helpers import parse_constraint, VersionTypes
 from poetry.core.semver.version import Version
-from poetry.core.toml.file import TOMLFile
 from poetry.core.version.markers import BaseMarker
 
 from poetry.console import console
@@ -476,7 +475,7 @@ class EnvManager:
 
         cwd = self._poetry.file.parent
 
-        envs_file = TOMLFile(venv_path / self.ENVS_FILE)
+        envs_file = venv_path / self.ENVS_FILE
 
         try:
             python_version = Version.parse(python)
@@ -526,10 +525,10 @@ class EnvManager:
 
             return self.get(reload=True)
 
-        envs = tomlkit.document()
+        envs = {}
         base_env_name = self.generate_env_name(self._poetry.package.name, str(cwd))
         if envs_file.exists():
-            envs = envs_file.read()
+            envs, _ = toml.load(envs_file)
             current_env = envs.get(base_env_name)
             if current_env is not None:
                 current_minor = current_env["minor"]
@@ -560,7 +559,7 @@ class EnvManager:
 
         # Activate
         envs[base_env_name] = {"minor": minor, "patch": patch}
-        envs_file.write(envs)
+        envs_file.write_text(toml.dumps(envs))
 
         return self.get(reload=True)
 
@@ -574,19 +573,11 @@ class EnvManager:
         name = self._poetry.package.name
         name = self.generate_env_name(name, str(self._poetry.file.parent))
 
-        envs_file = TOMLFile(venv_path / self.ENVS_FILE)
+        envs_file = venv_path / self.ENVS_FILE
         if envs_file.exists():
-            envs = envs_file.read()
-            env = envs.get(name)
-            if env is not None:
-                io.write_line(
-                    "Deactivating virtualenv: <comment>{}</comment>".format(
-                        venv_path / (name + "-py{}".format(env["minor"]))
-                    )
-                )
-                del envs[name]
-
-                envs_file.write(envs)
+            data, dumps = toml.load(envs_file)
+            del data['name']
+            envs_file.write_text(dumps(data))
 
     def get(self, reload: bool = False, ignore_activated_env: bool = False) -> Union["VirtualEnv", "SystemEnv"]:
         if self._env is not None and not reload:
@@ -601,11 +592,11 @@ class EnvManager:
             venv_path = Path(venv_path)
 
         cwd = self._poetry.file.parent
-        envs_file = TOMLFile(venv_path / self.ENVS_FILE)
+        envs_file = venv_path / self.ENVS_FILE
         env = None
         base_env_name = self.generate_env_name(self._poetry.package.name, str(cwd))
         if envs_file.exists():
-            envs = envs_file.read()
+            envs, _ = toml.load(envs_file)
             env = envs.get(base_env_name)
             if env:
                 python_minor = env["minor"]
@@ -689,7 +680,7 @@ class EnvManager:
             venv_path = Path(venv_path)
 
         cwd = self._poetry.file.parent
-        envs_file = TOMLFile(venv_path / self.ENVS_FILE)
+        envs_file = venv_path / self.ENVS_FILE
         base_env_name = self.generate_env_name(self._poetry.package.name, str(cwd))
 
         if python.startswith(base_env_name):
@@ -704,7 +695,7 @@ class EnvManager:
 
                     venv_minor = ".".join(str(v) for v in venv.version_info[:2])
                     base_env_name = self.generate_env_name(cwd.name, str(cwd))
-                    envs = envs_file.read()
+                    envs, _ = toml.load(envs_file)
 
                     current_env = envs.get(base_env_name)
                     if not current_env:
@@ -714,7 +705,7 @@ class EnvManager:
 
                     if current_env["minor"] == venv_minor:
                         del envs[base_env_name]
-                        envs_file.write(envs)
+                        envs_file.write_text(toml.dumps(envs))
 
                     self.remove_venv(venv.path)
 
@@ -759,14 +750,14 @@ class EnvManager:
             raise ValueError(f'<warning>Environment "{name}" does not exist.</warning>')
 
         if envs_file.exists():
-            envs = envs_file.read()
+            envs, dumps = toml.load(envs_file)
             current_env = envs.get(base_env_name)
             if current_env is not None:
                 current_minor = current_env["minor"]
 
                 if current_minor == minor:
                     del envs[base_env_name]
-                    envs_file.write(envs)
+                    envs_file.write_text(dumps(envs))
 
         self.remove_venv(venv)
 
@@ -1545,7 +1536,7 @@ class SystemEnv(Env):
         }
 
     def get_pip_version(self) -> Version:
-        # noinspection PyPackageRequirements
+        # noinspection PyPackageRequirements,PyCompatibility
         from pip import __version__
 
         return Version.parse(__version__)
@@ -1690,7 +1681,7 @@ class VirtualEnv(Env):
 
 class GenericEnv(VirtualEnv):
     def __init__(
-        self, path: Path, base: Optional[Path] = None, child_env: Optional["Env"] = None
+            self, path: Path, base: Optional[Path] = None, child_env: Optional["Env"] = None
     ) -> None:
         self._child_env = child_env
 

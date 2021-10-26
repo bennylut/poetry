@@ -4,6 +4,7 @@ from typing import Optional
 from typing import Union
 
 from poetry.core.packages.project_package import ProjectPackage as _ProjectPackage
+from poetry.core.utils import toml
 
 if TYPE_CHECKING:
     from poetry.core.semver.version import Version  # noqa
@@ -25,11 +26,9 @@ class ProjectPackage(_ProjectPackage):
         return self
 
     def create_pyproject(self, path: Path):
-        import tomlkit
-
         from poetry.layouts.layout import POETRY_DEFAULT
 
-        pyproject = tomlkit.loads(POETRY_DEFAULT)
+        pyproject, dumps = toml.loads(POETRY_DEFAULT)
         content = pyproject["tool"]["poetry"]
 
         content["name"] = self.name
@@ -41,7 +40,7 @@ class ProjectPackage(_ProjectPackage):
         dependency_section["python"] = self.python_versions
 
         for dep in self.requires:
-            constraint = tomlkit.inline_table()
+            constraint = {}
             if dep.is_vcs():
                 constraint[dep.vcs] = dep.source_url
 
@@ -63,6 +62,4 @@ class ProjectPackage(_ProjectPackage):
 
             dependency_section[dep.name] = constraint
 
-        path.joinpath("pyproject.toml").write_text(
-            pyproject.as_string(), encoding="utf-8"
-        )
+        path.joinpath("pyproject.toml").write_text(dumps(pyproject))

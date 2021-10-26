@@ -40,7 +40,7 @@ class Installer:
 
         self._project = project
         self._env = project.env
-        self._package : ProjectPackage = package or project.package
+        self._package: ProjectPackage = package or project.package
         self._locker = project.locker
         self._pool = project.pool
 
@@ -49,9 +49,9 @@ class Installer:
         self._update = False
         self._verbose = False
         self._write_lock = True
-        self._without_groups = None
-        self._with_groups = None
-        self._only_groups = None
+        # self._without_groups = None
+        # self._with_groups = None
+        # self._only_groups = None
 
         self._execute_operations = True
         self._lock = False
@@ -136,20 +136,20 @@ class Installer:
     def is_verbose(self) -> bool:
         return self._verbose
 
-    def without_groups(self, groups: List[str]) -> "Installer":
-        self._without_groups = groups
-
-        return self
-
-    def with_groups(self, groups: List[str]) -> "Installer":
-        self._with_groups = groups
-
-        return self
-
-    def only_groups(self, groups: List[str]) -> "Installer":
-        self._only_groups = groups
-
-        return self
+    # def without_groups(self, groups: List[str]) -> "Installer":
+    #     self._without_groups = groups
+    #
+    #     return self
+    #
+    # def with_groups(self, groups: List[str]) -> "Installer":
+    #     self._with_groups = groups
+    #
+    #     return self
+    #
+    # def only_groups(self, groups: List[str]) -> "Installer":
+    #     self._only_groups = groups
+    #
+    #     return self
 
     def update(self, update: bool = True) -> "Installer":
         self._update = update
@@ -276,20 +276,20 @@ class Installer:
             self._write_lock_file(local_repo.packages)
             return 0
 
-        if self._without_groups or self._with_groups or self._only_groups:
-            if self._with_groups:
-                # Default dependencies and opted-in optional dependencies
-                root = self._package.with_dependency_groups(self._with_groups)
-            elif self._without_groups:
-                # Default dependencies without selected groups
-                root = self._package.without_dependency_groups(self._without_groups)
-            else:
-                # Only selected groups
-                root = self._package.with_dependency_groups(
-                    self._only_groups, only=True
-                )
-        else:
-            root = self._package.without_optional_dependency_groups()
+        # if self._without_groups or self._with_groups or self._only_groups:
+        #     if self._with_groups:
+        #         # Default dependencies and opted-in optional dependencies
+        #         root = self._package.with_dependency_groups(self._with_groups)
+        #     elif self._without_groups:
+        #         # Default dependencies without selected groups
+        #         root = self._package.without_dependency_groups(self._without_groups)
+        #     else:
+        #         # Only selected groups
+        #         root = self._package.with_dependency_groups(
+        #             self._only_groups, only=True
+        #         )
+        # else:
+        root = self._package.clone()
 
         console.println("\n<info>Finding the necessary packages for the current system</>", verbosity=Verbosity.VERBOSE)
 

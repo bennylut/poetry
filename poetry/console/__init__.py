@@ -61,9 +61,9 @@ NullPrinter = NullPrinter()
 class Console(Printer):
     def __init__(self, io: Optional[IO] = None):
         if io is None:
-            input = ArgvInput()
-            input.set_stream(sys.stdin)
-            io = IO(input, StreamOutput(sys.stdout), StreamOutput(sys.stderr))
+            inpt = ArgvInput()
+            inpt.set_stream(sys.stdin)
+            io = IO(inpt, StreamOutput(sys.stdout), StreamOutput(sys.stderr))
 
         self.io: Optional[IO] = None
         self.set_io(io)
@@ -118,7 +118,7 @@ class Console(Printer):
             self.io.write(messages, verbosity=verbosity)
 
     def println(
-            self, messages: Union[str, Iterable[str]],
+            self, messages: Union[str, Iterable[str]] = "",
             verbosity: Verbosity = Verbosity.NORMAL,
     ) -> None:
         with self.out_lock:

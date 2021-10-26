@@ -2,16 +2,16 @@ from typing import TYPE_CHECKING
 
 from cleo.helpers import argument
 from cleo.helpers import option
+from poetry.core.pyproject.tables import POETRY_TABLE
+from poetry.core.utils.collections import nested_dict_get
 
 from .command import Command
-
 
 if TYPE_CHECKING:
     from poetry.core.semver.version import Version
 
 
 class VersionCommand(Command):
-
     name = "version"
     description = (
         "Shows the version of the project or bumps it when a valid "
@@ -63,11 +63,8 @@ patch, minor, major, prepatch, preminor, premajor, prerelease.
                     )
                 )
 
-            content = self.poetry.file.read()
-            poetry_content = content["tool"]["poetry"]
-            poetry_content["version"] = version.text
-
-            self.poetry.file.write(content)
+            with self.poetry.pyproject.edit() as data:
+                nested_dict_get(data, POETRY_TABLE)['version'] = version.text
         else:
             if self.option("short"):
                 self.line("{}".format(self.poetry.package.pretty_version))

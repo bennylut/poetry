@@ -10,16 +10,17 @@ from typing import Tuple
 
 from cleo.helpers import argument
 from cleo.helpers import option
+from poetry.core.utils import toml
+
+from poetry.config.config import Config
 
 from .command import Command
-
 
 if TYPE_CHECKING:
     from poetry.config.config_source import ConfigSource
 
 
 class ConfigCommand(Command):
-
     name = "config"
     description = "Manages configuration settings."
 
@@ -96,26 +97,25 @@ To remove a repository (repo is a short alias for repositories):
 
         from poetry.config.file_config_source import FileConfigSource
         from poetry.core.pyproject.exceptions import PyProjectException
-        from poetry.core.toml.file import TOMLFile
-        from poetry.factory import Factory
         from poetry.locations import CONFIG_DIR
 
-        config = Factory.create_config(self.io)
-        config_file = TOMLFile(Path(CONFIG_DIR) / "config.toml")
+        config = Config.load_global()
+        config_file = Path(CONFIG_DIR) / "config.toml"
 
         try:
-            local_config_file = TOMLFile(self.poetry.pyproject.project_management_files / "config.toml")
-            if local_config_file.exists():
-                config.merge(local_config_file.read())
+            local_config_path = self.poetry.pyproject.project_management_files / "config.toml"
+            if local_config_path.exists():
+                local_config, _ = toml.load(self.poetry.pyproject.project_management_files / "config.toml")
+                config.merge(local_config)
         except (RuntimeError, PyProjectException):
-            # not sure when this happens - need to check later
-            local_config_file = TOMLFile(Path.cwd() / "etc/rp/config.toml")
+            # TODO: not sure when this happens - need to check later
+            local_config_path = Path.cwd() / "etc/rp/config.toml"
 
         if self.option("local"):
-            config.set_config_source(FileConfigSource(local_config_file))
+            config.set_config_source(FileConfigSource(local_config_path))
 
         if not config_file.exists():
-            config_file.path.parent.mkdir(parents=True, exist_ok=True)
+            config_file.parent.mkdir(parents=True, exist_ok=True)
             config_file.touch(mode=0o0600)
 
         if self.option("list"):
@@ -274,11 +274,11 @@ To remove a repository (repo is a short alias for repositories):
         raise ValueError("Setting {} does not exist".format(self.argument("key")))
 
     def _handle_single_value(
-        self,
-        source: "ConfigSource",
-        key: str,
-        callbacks: Tuple[Any, Any, Any],
-        values: List[Any],
+            self,
+            source: "ConfigSource",
+            key: str,
+            callbacks: Tuple[Any, Any, Any],
+            values: List[Any],
     ) -> int:
         validator, normalizer, _ = callbacks
 
@@ -328,11 +328,11 @@ To remove a repository (repo is a short alias for repositories):
             self.line(message)
 
     def _get_setting(
-        self,
-        contents: Dict,
-        setting: Optional[str] = None,
-        k: Optional[str] = None,
-        default: Optional[Any] = None,
+            self,
+            contents: Dict,
+            setting: Optional[str] = None,
+            k: Optional[str] = None,
+            default: Optional[Any] = None,
     ) -> List[Tuple[str, str]]:
         orig_k = k
 

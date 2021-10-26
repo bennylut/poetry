@@ -61,9 +61,7 @@ class PyPiRepository(RemoteRepository):
             }
         )
 
-
         self._name = "PyPI"
-
 
     def find_packages(self, dependency: Dependency) -> List[Package]:
         """
@@ -152,7 +150,7 @@ class PyPiRepository(RemoteRepository):
 
         search = {"q": query}
 
-        response = http.session().get(self._base_url + "search", params=search, **self._request_auth_args)
+        response = http.session().get(self._base_url + "search", params=search)
         content = parse(response.content, namespaceHTMLElements=False)
         for result in content.findall(".//*[@class='package-snippet']"):
             name = result.find("h3/*[@class='package-snippet__name']").text
@@ -422,7 +420,6 @@ class PyPiRepository(RemoteRepository):
             return PackageInfo.from_wheel(wheel_archive).asdict()
 
         return PackageInfo.load(self._cache.remember_forever(f"wheels/{url}", get_info))
-
 
     def _get_info_from_sdist(self, url: str, project: ManagedProject) -> "PackageInfo":
 

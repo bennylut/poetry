@@ -1,11 +1,9 @@
 import threading
 from pathlib import Path
-from typing import Optional, Callable
 
 import requests
 from cachecontrol import CacheControl
 from cachecontrol.caches import FileCache
-
 from poetry.locations import CACHE_DIR
 
 _global_sessions = threading.local()

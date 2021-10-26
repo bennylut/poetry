@@ -1,21 +1,20 @@
+import os
 from pathlib import Path
 from typing import Dict, List, Optional
-import os
 
-from poetry.core.pyproject.profiles import ProfilesActivationData
-from poetry.core.semver.version import Version
-from poetry.core.utils.props_ext import cached_property
-
+from poetry.__version__ import __version__
 from poetry.app.relaxed_poetry_updater import RelaxedPoetryUpdater
 from poetry.config.config import Config
 from poetry.console import console
-from poetry.locations import CONFIG_DIR, CACHE_DIR
+from poetry.core.pyproject.profiles import ProfilesActivationRequest
+from poetry.core.semver.version import Version
+from poetry.core.utils.props_ext import cached_property
+from poetry.locations import CACHE_DIR
 from poetry.managed_project import ManagedProject
 from poetry.plugins.plugin_manager import PluginManager
 from poetry.repositories.artifacts import Artifacts
 from poetry.templates.template_executor import TemplateExecutor
 from poetry.utils.appdirs import user_data_dir
-from poetry.__version__ import __version__
 from poetry.utils.authenticator import Authenticator
 
 
@@ -49,7 +48,7 @@ class RelaxedPoetry:
         else:
             manual_profiles = []
 
-        profile_activation = ProfilesActivationData(manual_profiles, command)
+        profile_activation = ProfilesActivationRequest.from_commandline(command, manual_profiles)
 
         try:
             self._active_project = Factory().create_poetry(

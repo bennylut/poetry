@@ -1,10 +1,8 @@
-from typing import Optional
+from typing import Optional, Dict, Any
 
 from cleo.helpers import argument
-from tomlkit import nl
-from tomlkit import table
-from tomlkit.items import AoT
-from tomlkit.items import Table
+from poetry.core.pyproject.tables import SOURCES_TABLE
+from poetry.core.utils.collections import nested_dict_set
 
 from poetry.config.source import Source
 from poetry.console.commands.command import Command
@@ -23,17 +21,16 @@ class SourceRemoveCommand(Command):
     ]
 
     @staticmethod
-    def source_to_table(source: Source) -> Table:
-        source_table: Table = table()
+    def source_to_table(source: Source) -> Dict[str, Any]:
+        source_table: Dict[str, Any] = {}
         for key, value in source.to_dict().items():
-            source_table.add(key, value)
-        source_table.add(nl())
+            source_table[key] = value
         return source_table
 
     def handle(self) -> Optional[int]:
         name = self.argument("name")
 
-        sources = AoT([])
+        sources = []
         removed = False
 
         for source in self.poetry.get_sources():
@@ -49,7 +46,7 @@ class SourceRemoveCommand(Command):
             )
             return 1
 
-        self.poetry.pyproject.poetry_config["source"] = sources
-        self.poetry.pyproject.save()
+        with self.poetry.pyproject.edit() as data:
+            nested_dict_set(data, SOURCES_TABLE, sources)
 
         return 0

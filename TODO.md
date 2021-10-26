@@ -1,12 +1,15 @@
 - Rework configuration (remove cache-dir, add alternative?) make hierarchical
-- pprm, ppkm, ppbm
-- cache everything (git repos, and urls too)
+- move to pkm
 - remove layout
 - remove installer and add env managers (+self env)
-- handle the "remove package cookiecutter" bug
-- move toml namespace from poetry to relaxed-poetry
+- move toml namespace from poetry to pkm
 - improve init to support poetry and pipenv
 - universal sources + conda, commands, repositories
 - consider dropping plugins support
 - add build-scripts/tasks section makefile style
 - add recipes in the documentation
+- investigate - why so slow `install numpy pandas` without cache
+- attempt to reduce vendors code in core
+- drop black, mypi, and flake8
+- sibling and path dependencies should have a profiles attribute 
+- support pkm install -g, -ga and -ge env

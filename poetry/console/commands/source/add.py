@@ -1,12 +1,9 @@
-from typing import Optional
+from typing import Optional, List, Any
 
 from cleo.helpers import argument
 from cleo.helpers import option
 from cleo.io.null_io import NullIO
-from tomlkit import nl
-from tomlkit import table
-from tomlkit.items import AoT
-from tomlkit.items import Table
+from poetry.core.utils.collections import nested_dict_set, nested_dict_get
 
 from poetry.config.source import Source
 from poetry.console.commands.command import Command
@@ -15,7 +12,6 @@ from poetry.repositories import Pool
 
 
 class SourceAddCommand(Command):
-
     name = "source add"
     description = "Add source configuration for project."
 
@@ -38,14 +34,6 @@ class SourceAddCommand(Command):
         option("secondary", "s", "Set this source as secondary."),
     ]
 
-    @staticmethod
-    def source_to_table(source: Source) -> Table:
-        source_table: Table = table()
-        for key, value in source.to_dict().items():
-            source_table.add(key, value)
-        source_table.add(nl())
-        return source_table
-
     def handle(self) -> Optional[int]:
         name = self.argument("name")
         url = self.argument("url")
@@ -63,10 +51,8 @@ class SourceAddCommand(Command):
         )
         existing_sources = self.poetry.get_sources()
 
-        sources = AoT([])
-
         for source in existing_sources:
-            if source == new_source:
+            if source.name == new_source.name:
                 self.line(
                     f"Source with name <c1>{name}</c1> already exits. Skipping addition."
                 )
@@ -78,22 +64,14 @@ class SourceAddCommand(Command):
                 )
                 return 1
 
-            if source.name == name:
-                self.line(f"Source with name <c1>{name}</c1> already exits. Updating.")
-                source = new_source
-                new_source = None
-
-            sources.append(self.source_to_table(source))
-
-        if new_source is not None:
-            self.line(f"Adding source with name <c1>{name}</c1>.")
-            sources.append(self.source_to_table(new_source))
+        self.line(f"Adding source with name <c1>{name}</c1>.")
+        new_source_dict = new_source.to_dict()
 
         # ensure new source is valid. eg: invalid name etc.
         self.poetry._pool = Pool()
         try:
             Factory.configure_sources(
-                self.poetry, sources, self.poetry.config, NullIO()
+                self.poetry, [new_source_dict], self.poetry.config, NullIO()
             )
             self.poetry.pool.repository(name)
         except ValueError as e:
@@ -102,7 +80,12 @@ class SourceAddCommand(Command):
             )
             return 1
 
-        self.poetry.pyproject.poetry_config["source"] = sources
-        self.poetry.pyproject.save()
-
+        sources_path = ['tool', 'poetry', 'source']
+        with self.poetry.pyproject.edit() as data:
+            lst: List[Any] = nested_dict_get(data, sources_path)
+            if not lst:
+                lst = [new_source_dict]
+                nested_dict_set(data, sources_path, lst)
+            else:
+                lst.append(new_source_dict)
         return 0

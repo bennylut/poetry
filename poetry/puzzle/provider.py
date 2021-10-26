@@ -1,10 +1,7 @@
 import logging
-import os
 import re
 import threading
 import time
-import urllib.parse
-
 from contextlib import contextmanager
 from pathlib import Path
 from tempfile import mkdtemp
@@ -15,7 +12,6 @@ from typing import Union
 
 from cleo.io.io import IO
 from cleo.ui.progress_indicator import ProgressIndicator
-
 from poetry.core.packages.dependency import Dependency
 from poetry.core.packages.directory_dependency import DirectoryDependency
 from poetry.core.packages.file_dependency import FileDependency
@@ -40,10 +36,9 @@ from poetry.puzzle.exceptions import OverrideNeeded
 from poetry.repositories import Pool
 from poetry.utils.env import Env
 from poetry.utils.helpers import safe_rmtree
+from typing import TYPE_CHECKING
 
 logger = logging.getLogger(__name__)
-
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from poetry.managed_project import ManagedProject
@@ -79,7 +74,7 @@ class Provider:
         self._env = env
         self._python_constraint = project.package.python_constraint
         self._installed_python_constraint = _installed_python_version_constraint(env) if env else None
-        self._search_for = {}
+        self._search_for: Dict[Dependency, List[Package]] = {}
         # TODO: lock has a context manager associated with it already - replace it and remove semaphore custom context.
         self._search_for_sem = threading.Semaphore(1)
         self._is_debugging = self._io.is_debug() or self._io.is_very_verbose()
@@ -455,6 +450,7 @@ class Provider:
         if package.is_root():
             package = package.clone()
             requires = package.all_requires
+
         elif not package.is_root() and package.source_type not in {
             "directory",
             "sibling",
@@ -574,10 +570,10 @@ class Provider:
             # Regrouping by constraint
             by_constraint = dict()
             for dep in deps:
-                if dep.constraint not in by_constraint:
-                    by_constraint[dep.constraint] = []
+                if dep.spec not in by_constraint:
+                    by_constraint[dep.spec] = []
 
-                by_constraint[dep.constraint].append(dep)
+                by_constraint[dep.spec].append(dep)
 
             # We merge by constraint
             for constraint, _deps in by_constraint.items():
@@ -723,7 +719,7 @@ class Provider:
             clean_dependencies.append(dep)
 
         package = DependencyPackage(
-            package.dependency, package.with_dependency_groups([], only=True)
+            package.dependency, package.clone(with_deps=False)
         )
 
         for dep in clean_dependencies:

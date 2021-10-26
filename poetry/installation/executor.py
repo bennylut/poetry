@@ -14,7 +14,7 @@ from typing import Union
 
 from cleo.io.null_io import NullIO
 from poetry.core.packages.utils.link import Link
-from poetry.core.pyproject.toml import PyProject
+from poetry.core.pyproject.project import Project
 
 from poetry.utils._compat import decode
 from poetry.utils.env import EnvCommandError
@@ -232,7 +232,7 @@ class Executor:
 
                 with console.out_lock:
                     trace = ExceptionTrace(e)
-                    trace.render(io)
+                    trace.render(io.io)
                     io.write_line("")
             finally:
                 with console.out_lock:
@@ -471,7 +471,7 @@ class Executor:
         else:
             req = Path(package.source_url).resolve(strict=False)
 
-        if PyProject.has_poetry_section(req / "pyproject.toml"):
+        if Project.has_poetry_section(req / "pyproject.toml"):
             # Even if there is a build system specified
             # some versions of pip (< 19.0.0) don't understand it
             # so we need to check the version of pip to know

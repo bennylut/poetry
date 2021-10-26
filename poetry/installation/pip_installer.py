@@ -9,9 +9,9 @@ from typing import Any
 from typing import Union
 
 from cleo.io.io import IO
-from poetry.core.pyproject.profiles import ProfilesActivationData
+from poetry.core.pyproject.profiles import ProfilesActivationRequest
 
-from poetry.core.pyproject.toml import PyProject
+from poetry.core.pyproject.project import Project
 from poetry.installation.base_installer import BaseInstaller
 from poetry.repositories.pool import Pool
 from poetry.utils._compat import encode
@@ -194,7 +194,8 @@ class PipInstaller(BaseInstaller):
         else:
             req = Path(package.source_url).resolve(strict=False)
 
-        pyproject = PyProject.read(os.path.join(req, "pyproject.toml"), ProfilesActivationData([], "build"))
+        pyproject = Project.read(os.path.join(req, "pyproject.toml"),
+                                   ProfilesActivationRequest.from_commandline("build", []))
 
         if pyproject.is_poetry_project():
             # Even if there is a build system specified
@@ -205,7 +206,7 @@ class PipInstaller(BaseInstaller):
             legacy_pip = self._env.pip_version < self._env.pip_version.__class__(
                 19, 0, 0
             )
-            package_poetry = Factory().create_poetry(pyproject.file.path.parent)
+            package_poetry = Factory().create_poetry(pyproject.path.parent)
 
             if package.develop and not package_poetry.package.build_script:
                 from poetry.masonry.builders.editable import EditableBuilder

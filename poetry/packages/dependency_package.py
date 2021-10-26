@@ -6,6 +6,7 @@ from poetry.core.packages.dependency import Dependency
 from poetry.core.packages.package import Package
 
 
+# noinspection PyMissingConstructor
 class DependencyPackage:
     def __init__(self, dependency: Dependency, package: Package) -> None:
         self._dependency = dependency
@@ -19,8 +20,8 @@ class DependencyPackage:
     def package(self) -> Package:
         return self._package
 
-    def clone(self) -> "DependencyPackage":
-        return self.__class__(self._dependency, self._package.clone())
+    def clone(self, with_deps: bool = True) -> "DependencyPackage":
+        return self.__class__(self._dependency, self._package.clone(with_deps=with_deps))
 
     def with_features(self, features: List[str]) -> "DependencyPackage":
         return self.__class__(self._dependency, self._package.with_features(features))

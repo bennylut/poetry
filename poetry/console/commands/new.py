@@ -12,7 +12,8 @@ class NewCommand(Command):
 
     new
         {template : the template to use (supports path, git, zip, url to zip and builtins)}
-        {--o|out : the output path to use (defaults to the active project directory, if no active project, defaults to the current directory)}
+        {--o|out : the output path to use (defaults to the active project directory,
+                   if no active project, defaults to the current directory)}
         {--f|allow-override : allows the template to override existing files}
         {template_args?* : template arguments, can be positional and key=value}
     """

@@ -1,9 +1,7 @@
 import logging
-
-from typing import TYPE_CHECKING
 from typing import Dict
 from typing import Optional
-
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from poetry.config.config import Config
@@ -35,7 +33,6 @@ class KeyRing:
         if not self.is_available():
             return
 
-        import keyring
         import keyring.errors
 
         name = self.get_entry_name(name)
@@ -51,7 +48,6 @@ class KeyRing:
         if not self.is_available():
             return
 
-        import keyring
         import keyring.errors
 
         name = self.get_entry_name(name)
@@ -69,7 +65,6 @@ class KeyRing:
         if not self.is_available():
             return
 
-        import keyring
         import keyring.errors
 
         name = self.get_entry_name(name)

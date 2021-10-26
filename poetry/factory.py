@@ -1,7 +1,6 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
-from copy import deepcopy
 from pathlib import Path
 from typing import Dict
 from typing import List
@@ -9,11 +8,12 @@ from typing import Optional
 from typing import TYPE_CHECKING
 
 from cleo.io.io import IO
+from cleo.io.outputs.output import Verbosity
 from poetry.core.factory import Factory as BaseFactory
 from poetry.core.poetry import Poetry
-from poetry.core.pyproject.profiles import ProfilesActivationData
-from poetry.core.pyproject.toml import PyProject
-from poetry.core.toml.file import TOMLFile
+from poetry.core.pyproject.profiles import ProfilesActivationRequest
+from poetry.core.pyproject.project import Project
+from poetry.core.utils import toml
 
 from .config.config import Config
 from .console import console
@@ -33,20 +33,21 @@ class Factory(BaseFactory):
     """
 
     def create_poetry_for_pyproject(
-            self, project: PyProject, *,
-            with_groups:bool = True,
+            self, project: Project, *,
             env: Optional["Env"] = None):
 
-        base_poetry = super(Factory, self).create_poetry_for_pyproject(project, with_groups=with_groups)
+        base_poetry = super(Factory, self).create_poetry_for_pyproject(project)
         return self._upgrade(base_poetry, env=env)
 
     def create_poetry(
             self,
             cwd: Optional[Path] = None,
-            with_groups: bool = True,
-            profiles: Optional[ProfilesActivationData] = None
+            profiles: Optional[ProfilesActivationRequest] = None
     ) -> ManagedProject:
-        base_poetry = super(Factory, self).create_poetry(cwd, profiles=profiles, with_groups=with_groups)
+
+        console.println(f"Loading managed project from directory: {cwd} with profiles activation: {profiles}", Verbosity.DEBUG)
+
+        base_poetry = super(Factory, self).create_poetry(cwd, profiles=profiles)
         return self._upgrade(base_poetry)
 
     def _upgrade(
@@ -69,19 +70,20 @@ class Factory(BaseFactory):
 
         # Loading local configuration
 
-        def apply_config(p: PyProject):
+        def apply_config(p: Project):
             if p.parent:
                 apply_config(p.parent)
 
             if p.is_stored():
-                local_config_file = TOMLFile(base_poetry.pyproject.project_management_files / "config.toml")
+                local_config_file = base_poetry.pyproject.project_management_files / "config.toml"
                 if local_config_file.exists():
                     if io.is_debug():
                         io.write_line(
-                            "Loading configuration file {}".format(local_config_file.path)
+                            "Loading configuration file {}".format(local_config_file)
                         )
 
-                    config.merge(local_config_file.read())
+                    config_data,_ = toml.load(local_config_file)
+                    config.merge(config_data)
 
         apply_config(base_poetry.pyproject)
 

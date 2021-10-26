@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "relaxed-poetry"
-version = "0.4.0"
+version = "0.5.0"
 description = "Fork of Poetry (Python dependency management and packaging tool), attempts to be faster and less strict."
 authors = [
     "bennylut"
@@ -25,16 +25,12 @@ documentation = "https://github.com/bennylut/relaxed-poetry"
 keywords = ["packaging", "dependency", "poetry", "relaxed-poetry"]
 
 classifiers = [
-    "Topic :: Software Development :: Build Tools",
+    "Topic :: Software Development :: Build Tools", 
     "Topic :: Software Development :: Libraries :: Python Modules"
 ]
 
 [tool.poetry.build]
 generate-setup-file = false
-
-[tool.relaxed-poetry.properties]
-relaxed-poetry-core-dep = ">=0.3.0"
-protopy-lib-dep=">=0.2.0"
 
 # Requirements
 
@@ -47,11 +43,10 @@ crashtest = "^0.3.0"
 requests = "^2.18"
 cachy = "^0.3.0"
 requests-toolbelt = "^0.9.1"
-cachecontrol = { version = "^0.12.4", extras = ["filecache"] }
+cachecontrol = { version = "^0.12.4", extras = ["filecache"]}
 pkginfo = "^1.5"
 html5lib = "^1.0"
 shellingham = "^1.1"
-tomlkit = ">=0.7.0,<1.0.0"
 pexpect = "^4.7.0"
 packaging = "^20.4"
 # temporarily clamped due to https://github.com/pypa/pip/issues/9953
@@ -78,10 +73,9 @@ deepdiff = "^5.0"
 [tool.poetry.scripts]
 rp = "poetry.console.application:main"
 
-
-[build-system]
-requires = ["relaxed-poetry-core>=0.0.7"]
-build-backend = "poetry.core.masonry.api"
+[tool.relaxed-poetry.properties]
+relaxed-poetry-core-dep = ">=0.4.0"
+protopy-lib-dep=">=0.2.0"
 
 
 [tool.isort]
@@ -119,6 +113,11 @@ exclude = '''
 
 [tool.coverage.report]
 exclude_lines = [
-    "pragma: no cover",
+    "pragma: no cover", 
     "if TYPE_CHECKING:"
 ]
+
+
+[build-system]
+requires = ["relaxed-poetry-core>=0.0.7"]
+build-backend = "poetry.core.masonry.api"

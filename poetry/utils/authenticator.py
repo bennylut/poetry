@@ -16,12 +16,10 @@ from poetry.exceptions import PoetryException
 from poetry.utils import http
 from poetry.utils.password_manager import PasswordManager
 
-
 if TYPE_CHECKING:
     from cleo.io.io import IO
 
     from poetry.config.config import Config
-
 
 logger = logging.getLogger()
 
@@ -42,7 +40,6 @@ class Authenticator:
             )
         else:
             getattr(logger, level, logger.debug)(message)
-
 
     def request(self, method: str, url: str, **kwargs: Any) -> requests.Response:
         request = requests.Request(method, url)
@@ -135,7 +132,7 @@ class Authenticator:
         return self._get_http_auth(name, None)
 
     def _get_http_auth(
-        self, name: str, netloc: Optional[str]
+            self, name: str, netloc: Optional[str]
     ) -> Optional[Dict[str, str]]:
         if name == "pypi":
             url = "https://upload.pypi.org/legacy/"
@@ -158,7 +155,7 @@ class Authenticator:
             return auth
 
     def _get_credentials_for_netloc(
-        self, netloc: str
+            self, netloc: str
     ) -> Tuple[Optional[str], Optional[str]]:
         credentials = (None, None)
 
@@ -173,7 +170,7 @@ class Authenticator:
         return credentials
 
     def _get_credentials_for_netloc_from_keyring(
-        self, url: str, netloc: str, username: Optional[str]
+            self, url: str, netloc: str, username: Optional[str]
     ) -> Optional[Dict[str, str]]:
         import keyring
 

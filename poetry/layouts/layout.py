@@ -1,22 +1,15 @@
 from pathlib import Path
-from typing import TYPE_CHECKING
 from typing import Dict
 from typing import Optional
+from typing import TYPE_CHECKING
 
-from tomlkit import dumps
-from tomlkit import inline_table
-from tomlkit import loads
-from tomlkit import table
+from poetry.core.utils import toml
 
 from poetry.utils.helpers import canonicalize_name
 from poetry.utils.helpers import module_name
 
-
 if TYPE_CHECKING:
-    from tomlkit.items import InlineTable
-
-    from poetry.core.pyproject.toml import PyProject
-
+    from poetry.core.pyproject.project import Project
 
 POETRY_DEFAULT = """\
 [tool.poetry]
@@ -41,16 +34,16 @@ class Layout:
     ACCEPTED_README_FORMATS = {"md", "rst"}
 
     def __init__(
-        self,
-        project: str,
-        version: str = "0.1.0",
-        description: str = "",
-        readme_format: str = "md",
-        author: Optional[str] = None,
-        license: Optional[str] = None,  # noqa
-        python: str = "*",
-        dependencies: Optional[Dict[str, str]] = None,
-        dev_dependencies: Optional[Dict[str, str]] = None,
+            self,
+            project: str,
+            version: str = "0.1.0",
+            description: str = "",
+            readme_format: str = "md",
+            author: Optional[str] = None,
+            license: Optional[str] = None,  # noqa
+            python: str = "*",
+            dependencies: Optional[Dict[str, str]] = None,
+            dev_dependencies: Optional[Dict[str, str]] = None,
     ):
         self._project = canonicalize_name(project).replace(".", "-")
         self._package_path_relative = Path(
@@ -86,14 +79,14 @@ class Layout:
     def package_path(self) -> Path:
         return self.basedir / self._package_path_relative
 
-    def get_package_include(self) -> Optional["InlineTable"]:
-        package = inline_table()
+    def get_package_include(self) -> Optional["Dict"]:
+        package = {}
 
         include = self._package_path_relative.parts[0]
-        package.append("include", include)
+        package["include"]= include
 
         if self.basedir != Path():
-            package.append("from", self.basedir.as_posix())
+            package["from"] = self.basedir.as_posix()
         else:
             if include == self._project:
                 # package include and package name are the same,
@@ -114,11 +107,11 @@ class Layout:
         self._write_poetry(path)
 
     def generate_poetry_content(
-        self, original: Optional["PyProject"] = None
+            self, original: Optional["Project"] = None
     ) -> str:
         template = POETRY_DEFAULT
 
-        content = loads(template)
+        content,dumps = toml.loads(template)
 
         poetry_content = content["tool"]["poetry"]
         poetry_content["name"] = self._project
@@ -152,7 +145,7 @@ class Layout:
             del poetry_content["group"]
 
         # Add build system
-        build_system = table()
+        build_system = {}
         build_system_version = ""
 
         if BUILD_SYSTEM_MIN_VERSION is not None:
@@ -162,16 +155,17 @@ class Layout:
                 build_system_version += ","
             build_system_version += "<" + BUILD_SYSTEM_MAX_VERSION
 
-        build_system.add("requires", ["relaxed-poetry-core" + build_system_version])
-        build_system.add("build-backend", "poetry.core.masonry.api")
+        build_system["requires"] = ["relaxed-poetry-core" + build_system_version]
+        build_system["build-backend"] = "poetry.core.masonry.api"
 
-        content.add("build-system", build_system)
+        content["build-system"] = build_system
+
+        if original and original.path.exists():
+            odata, dumps = toml.load(original.path)
+            odata.update(content)
+            content = odata
 
         content = dumps(content)
-
-        if original and original.file.exists():
-            content = dumps(original.data) + "\n" + content
-
         return content
 
     def _create_default(self, path: "Path", src: bool = True) -> None:

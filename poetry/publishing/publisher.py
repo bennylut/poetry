@@ -4,8 +4,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Tuple, Callable
 from typing import List
 from typing import Optional
-from typing import Union
 
+from cleo.io.io import IO
 from cleo.ui.question import Question
 
 from ..utils.authenticator import Authenticator
@@ -14,9 +14,6 @@ from ..utils.helpers import get_client_cert
 from .uploader import Uploader
 
 if TYPE_CHECKING:
-    from cleo.io import BufferedIO
-    from cleo.io import ConsoleIO
-
     from ..managed_project import ManagedProject
 
 logger = logging.getLogger(__name__)
@@ -27,7 +24,7 @@ class Publisher:
     Registers and publishes packages to remote repositories.
     """
 
-    def __init__(self, poetry: "ManagedProject", io: Union["BufferedIO", "ConsoleIO"],
+    def __init__(self, poetry: "ManagedProject", io: IO,
                  user_credential_completer: Optional[Callable[[str, str], Tuple[str, str]]] = None) -> None:
         self._poetry = poetry
         self._package = poetry.package

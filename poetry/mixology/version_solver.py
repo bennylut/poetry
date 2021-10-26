@@ -302,7 +302,8 @@ class VersionSolver:
             # the incompatibility as well, See the `algorithm documentation`_ for
             # details.
             #
-            # .. _algorithm documentation: https://github.com/dart-lang/pub/tree/master/doc/solver.md#conflict-resolution
+            # .. _algorithm documentation:
+            # https://github.com/dart-lang/pub/tree/master/doc/solver.md#conflict-resolution
             if difference is not None:
                 new_terms.append(difference.inverse)
 

@@ -1,23 +1,18 @@
 import cgi
-import hashlib
 import re
-import threading
 import urllib.parse
 import warnings
-
 from collections import defaultdict
 from pathlib import Path
-from typing import TYPE_CHECKING, MutableMapping
 from typing import Any
 from typing import Iterator
 from typing import List
 from typing import Optional
+from typing import TYPE_CHECKING, MutableMapping
 
 import requests
 import requests.auth
-
 from cachy import CacheManager
-
 from poetry.core.packages.package import Package
 from poetry.core.packages.utils.link import Link
 from poetry.core.semver.helpers import parse_constraint
@@ -28,14 +23,14 @@ from poetry.locations import REPOSITORY_CACHE_DIR
 from poetry.utils.helpers import canonicalize_name
 from poetry.utils.patterns import wheel_file_re
 
+from .exceptions import PackageNotFound
+from .exceptions import RepositoryError
+from .pypi_repository import PyPiRepository
 from ..config.config import Config
 from ..inspection.info import PackageInfo
 from ..managed_project import ManagedProject
 from ..utils import http
 from ..utils.authenticator import Authenticator
-from .exceptions import PackageNotFound
-from .exceptions import RepositoryError
-from .pypi_repository import PyPiRepository
 
 if TYPE_CHECKING:
     from poetry.core.packages.dependency import Dependency
@@ -46,7 +41,7 @@ except ImportError:
     try:
         from html.parser import HTMLParser
     except ImportError:
-        # noinspection PyUnresolvedReferences
+        # noinspection PyUnresolvedReferences,PyCompatibility
         from HTMLParser import HTMLParser
 
     unescape = HTMLParser().unescape
@@ -160,6 +155,7 @@ class Page:
         return self._clean_re.sub(lambda match: "%%%2x" % ord(match.group(0)), url)
 
 
+# noinspection PyMissingConstructor
 class LegacyRepository(PyPiRepository):
     def __init__(
             self,

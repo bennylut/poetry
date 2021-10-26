@@ -1,11 +1,10 @@
+import os
 import shutil
-from functools import cmp_to_key
+import site
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional
-import os
-import site
 
-from poetry.core.pyproject.toml import PyProject
+from poetry.core.pyproject.project import Project
 from poetry.core.utils.props_ext import cached_property
 
 from poetry.console import console
@@ -97,7 +96,7 @@ class RelaxedPoetryUpdater:
         env = self._installation_env
         from poetry.__version__ import __version__
 
-        pyproject = PyProject.new_in_mem("rp-installation", "1.0.0")
+        pyproject = Project.new_in_mem("rp-installation", "1.0.0")
         dependencies = pyproject.dependencies
         dependencies["relaxed-poetry"] = version or f">={__version__}"
         dependencies["python"] = "^3.6"

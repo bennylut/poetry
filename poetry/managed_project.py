@@ -1,20 +1,21 @@
 from pathlib import Path
-from typing import TYPE_CHECKING, Iterator, Optional, Union
-from typing import List
+from typing import List, Union, MutableMapping
+from typing import TYPE_CHECKING, Iterator, Optional
 
 from cleo.io.outputs.output import Verbosity
-from poetry.core._vendor.tomlkit import inline_table
 from poetry.core.packages.dependency import Dependency
-from poetry.core.pyproject.profiles import ProfilesActivationData
-from poetry.core.pyproject.toml import PyProject
+from poetry.core.poetry import Poetry as BasePoetry
+from poetry.core.pyproject.profiles import ProfilesActivationRequest
+from poetry.core.pyproject.project import Project
+from poetry.core.pyproject.tables import DEPENDENCIES_TABLE
+from poetry.core.utils.collections import nested_dict_get, nested_dict_set
 from poetry.core.utils.props_ext import cached_property
 
 from poetry.__version__ import __version__
 from poetry.config.source import Source
-from poetry.core.poetry import Poetry as BasePoetry
-
 from .console import console
 from .installation import Installer
+from .installation.operations import Uninstall
 from .utils.authenticator import Authenticator
 
 if TYPE_CHECKING:
@@ -22,7 +23,6 @@ if TYPE_CHECKING:
 
     from .config.config import Config
     from .packages.locker import Locker
-    from .plugins.plugin_manager import PluginManager
     from .repositories.pool import Pool
     from .utils.env import Env
 
@@ -32,7 +32,7 @@ class ManagedProject(BasePoetry):
 
     def __init__(
             self,
-            pyproject: PyProject,
+            pyproject: Project,
             package: "ProjectPackage",
             locker: "Locker",
             config: "Config",
@@ -44,8 +44,9 @@ class ManagedProject(BasePoetry):
 
         self._locker = locker
         self._config = config
-        self._pool = Pool()
+        self._pool = Pool()  # TODO: do we really needs that?
         self._env = env
+        self._installed_repository = None
 
     @property
     def path(self) -> Path:
@@ -121,7 +122,7 @@ class ManagedProject(BasePoetry):
             for source in self.pyproject.poetry_config.get("source", [])
         ]
 
-    def _load_related_project(self, pyprj: PyProject) -> "ManagedProject":
+    def _load_related_project(self, pyprj: Project) -> "ManagedProject":
         from poetry.factory import Factory
         return Factory().create_poetry_for_pyproject(pyprj)
 
@@ -139,22 +140,65 @@ class ManagedProject(BasePoetry):
             return self._load_related_project(parent)
         return None
 
+    @property
+    def installed_repository(self):
+        if not self._installed_repository:
+            from .repositories.installed_repository import InstalledRepository
+            self._installed_repository = InstalledRepository.load(self.env)
+
+        return self._installed_repository
+
+    def remove_dependencies(
+            self, names: List[str], *,
+            dry_run: bool = False, include_deps: bool = True):
+
+        modified_package = self.package.clone()
+
+        for name in names:
+            modified_package.remove_dependency(name)
+
+        installer = self._create_installer(modified_package)
+        installer.dry_run(dry_run)
+        installer.verbose(True)
+
+        if include_deps:
+            installer.update(True)
+            installer.whitelist(names)
+
+            installer.run()
+        else:
+            executor = installer.executor
+            installed = self.installed_repository
+
+            installed_packages = {p.name: p for p in installed.packages}
+            ops = [Uninstall(installed_packages[name]) for name in names if name in installed_packages]
+
+            executor.execute(ops)
+
+        if not dry_run:  # update pyproject
+            with self.pyproject.edit() as data:
+                dependencies = nested_dict_get(data, DEPENDENCIES_TABLE)
+                if isinstance(dependencies, MutableMapping):
+                    for name in names:
+                        del dependencies[name]
+
+        # drop installed repository so that it will get reloaded if anyone needs it
+        self._installed_repository = None
+
     def install_dependencies(
-            self, dependencies: List[str], *, with_groups: Optional[List[str]] = None, synchronize: bool = False,
-            lock_only: bool = False, update: bool = False, dry_run: bool = False, allow_prereleases: bool = False,
-            source: Optional[str] = None, optional: bool = False, extras_strings: Optional[List[str]] = None,
-            editable: bool = False, python: Optional[str] = None, platform: Optional[str] = None,
-            group: str = "default"):
+            self, dependencies: List[str], *, synchronize: bool = False, lock_only: bool = False, update: bool = False,
+            dry_run: bool = False, allow_prereleases: bool = False, source: Optional[str] = None,
+            optional: bool = False, extras_strings: Optional[List[str]] = None,
+            editable: bool = False, python: Optional[str] = None, platform: Optional[str] = None):
 
         kwargs = {
             "allow_prereleases": allow_prereleases, "source": source, "optional": optional,
             "extras_strings": extras_strings, "editable": editable, "python": python, "platform": platform,
-            "group": group
         }
 
         from .dependencies.dependency_parser import DependencyParser
 
-        modified_package = self.package.clone()
+        modified_package: ProjectPackage = self.package.clone()
 
         dparser = DependencyParser(self)
         parsed_deps = [dparser.parse(dependency, **kwargs) for dependency in dependencies]
@@ -164,10 +208,9 @@ class ManagedProject(BasePoetry):
             if parsed_dep.dependency.name in existing_dependencies:
                 if update:
                     existing_dependency: Dependency = existing_dependencies[parsed_dep.dependency.name]
-                    for group in existing_dependency.groups:
-                        modified_package.dependency_group(group).remove_dependency(existing_dependency.name)
+                    modified_package.remove_dependency(existing_dependency.name)
                 else:
-                    if parsed_dep.constraint != '*':
+                    if parsed_dep.spec != '*':
                         raise ValueError(
                             f"dependency {parsed_dep.dependency.name} already exists in pyproject, if you want to change it re-run with --update")
                     continue  # dont add the dependency - it is already set
@@ -185,36 +228,38 @@ class ManagedProject(BasePoetry):
             installer.extras(extras_strings)
 
         installer.requires_synchronization(synchronize)
-        if with_groups:
-            installer.with_groups(with_groups)
-
         repo = installer.run()
 
         if not dry_run:
+            with self.pyproject.edit() as data:
 
-            pyprj_deps = self.pyproject.dependencies
-            for parsed_dep in parsed_deps:
-                if isinstance(parsed_dep.constraint, str):
-                    constraint = parsed_dep.constraint
+                dependencies = nested_dict_get(data, DEPENDENCIES_TABLE)
+                if not dependencies:
+                    dependencies = {}
+                    nested_dict_set(data, DEPENDENCIES_TABLE, dependencies)
+
+                for parsed_dep in parsed_deps:
                     if not parsed_dep.version_specified:
-                        constraint = f"^{repo.find_packages(parsed_dep.dependency)[0].version}"
-                else:
-                    constraint = inline_table()
-                    constraint.update(parsed_dep.constraint)
-                    if not parsed_dep.version_specified:
-                        constraint['version'] = f"^{repo.find_packages(parsed_dep.dependency)[0].version}"
+                        required_version = f"^{repo.find_packages(parsed_dep.dependency)[0].version}"
+                        if isinstance(parsed_dep.spec, str):
+                            parsed_dep.spec = required_version
+                        else:
+                            parsed_dep.spec['version'] = required_version
 
-                pyprj_deps[parsed_dep.dependency.name] = constraint
+                    dependencies[parsed_dep.dependency.name] = parsed_dep.spec
 
-            self.pyproject.save()
 
             # reload package to reflect changes
             from poetry.factory import Factory
             self._package = Factory().create_poetry_for_pyproject(self.pyproject, env=self._env).package
             self.installer.set_package(self._package)
 
+            # drop installed repository so that it will get reloaded if anyone needs it
+            self._installed_repository = None
+
     @classmethod
-    def load(cls, project_dir: Path, profiles: Optional[ProfilesActivationData] = None):
+    def load(cls, project_dir: Union[str, Path], profiles: Optional[ProfilesActivationRequest] = None):
+        project_dir = Path(project_dir)
         from poetry.factory import Factory
         # TODO: remove the "factory" class and scatter operations into their appropriate place
         return Factory().create_poetry(project_dir, profiles=profiles)

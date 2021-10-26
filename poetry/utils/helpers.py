@@ -3,7 +3,6 @@ import re
 import shutil
 import stat
 import tempfile
-
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
@@ -12,8 +11,6 @@ from typing import Dict
 from typing import Iterator
 from typing import List
 from typing import Optional
-
-import requests
 
 from poetry.config.config import Config
 from poetry.core.packages.package import Package

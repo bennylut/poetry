@@ -1,15 +1,13 @@
-import re
-from pathlib import Path
-from typing import Dict, Optional, Tuple, Any, List, Union
-import urllib.parse
 import os
+import re
+import urllib.parse
+from pathlib import Path
+from typing import Dict, Optional, Any, List, Union
+from typing import TYPE_CHECKING
 
 from dataclasses import dataclass
 from poetry.core.pyproject.exceptions import PyProjectException
 from poetry.core.semver.helpers import parse_constraint
-
-from typing import TYPE_CHECKING
-
 from poetry.factory import Factory
 from poetry.managed_project import ManagedProject
 
@@ -20,7 +18,7 @@ if TYPE_CHECKING:
 @dataclass
 class ParsedDependency:
     dependency: "DependencyTypes"
-    constraint: Union[Dict[str, Any], str]
+    spec: Union[Dict[str, Any], str]
     version_specified: bool
 
 
@@ -43,8 +41,7 @@ class DependencyParser:
             extras_strings: Optional[List[str]] = None,
             editable: bool = False,
             python: Optional[str] = None,
-            platform: Optional[str] = None,
-            group: str = "default"
+            platform: Optional[str] = None
     ) -> ParsedDependency:
 
         requirement = self._parse_requirement(requires)
@@ -105,7 +102,6 @@ class DependencyParser:
             Factory.create_dependency(
                 requirement["name"],
                 constraint,
-                groups=[group],
                 root_dir=self._base_path,
                 project=self._project.pyproject
             ),

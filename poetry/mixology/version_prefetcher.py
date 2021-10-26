@@ -29,7 +29,7 @@ class VersionPrefetcher:
         pending: List[Dependency] = [d for d in self._vsolver.solution.unsatisfied if str(d) not in self._prefetched]
         vsolver = self._vsolver
 
-        def fetch(dependency):
+        def fetch(dependency: Dependency):
             version = vsolver._get_locked(dependency)
             if version is None or not dependency.constraint.allows(version.version):
                 try:

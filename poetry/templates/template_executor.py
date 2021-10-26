@@ -4,7 +4,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from typing import List, Dict, Optional, ContextManager
 
-from poetry.core.pyproject.toml import PyProject
+from poetry.core.pyproject.project import Project
 from poetry.core.vcs import Git
 from poetry.core.utils.props_ext import cached_property
 from poetry.core.vcs.git import GitConfig
@@ -156,6 +156,7 @@ class _RelaxedPoetryProjectDefaults:
         mj, mn, _ = platform.python_version_tuple()
         return f"^{mj}.{mn}"
 
+    # noinspection PyCompatibility
     @cached_property
     def buildsys_requirements(self) -> str:
         """
@@ -176,7 +177,7 @@ class _RelaxedPoetryTemplateContext:
         self.project_defaults = _RelaxedPoetryProjectDefaults()
 
     @property
-    def active_project(self) -> Optional[PyProject]:
+    def active_project(self) -> Optional[Project]:
         if not self._rp.active_project:
             return None
 

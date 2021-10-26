@@ -166,6 +166,7 @@ def bin_dir(version: Optional[str] = None) -> Path:
 
 
 def _get_win_folder_from_registry(csidl_name):
+    # noinspection PyCompatibility
     import winreg as _winreg
 
     shell_folder_name = {
@@ -623,6 +624,7 @@ class Installer:
         )
 
     def get_windows_path_var(self) -> Optional[str]:
+        # noinspection PyCompatibility
         import winreg
 
         with winreg.ConnectRegistry(None, winreg.HKEY_CURRENT_USER) as root:

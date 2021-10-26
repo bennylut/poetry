@@ -1,12 +1,12 @@
-from typing import TYPE_CHECKING
 from typing import Optional
+from typing import TYPE_CHECKING
 
 from cleo.helpers import argument
 from cleo.helpers import option
 from cleo.io.outputs.output import Verbosity
 
 from ..init import InitCommand
-from ... import console, NullPrinter
+from ... import NullPrinter
 
 if TYPE_CHECKING:
     from poetry.console.commands.show import ShowCommand
@@ -37,14 +37,11 @@ class DebugResolveCommand(InitCommand):
 
     def handle(self) -> Optional[int]:
 
-        from cleo.io.null_io import NullIO
-
         from poetry.core.packages.project_package import ProjectPackage
         from poetry.factory import Factory
         from poetry.puzzle import Solver
         from poetry.repositories.pool import Pool
         from poetry.repositories.repository import Repository
-        from poetry.utils.env import EnvManager
 
         packages = self.argument("package")
 

@@ -25,35 +25,6 @@ class ShowCommand(EnvCommand):
 
     arguments = [argument("package", "The package to inspect", optional=True)]
     options = [
-        option(
-            "without",
-            None,
-            "Do not show the information of the specified groups' dependencies.",
-            flag=False,
-            multiple=True,
-        ),
-        option(
-            "with",
-            None,
-            "Show the information of the specified optional groups' dependencies as well.",
-            flag=False,
-            multiple=True,
-        ),
-        option(
-            "default", None, "Only show the information of the default dependencies."
-        ),
-        option(
-            "only",
-            None,
-            "Only show the information of dependencies belonging to the specified groups.",
-            flag=False,
-            multiple=True,
-        ),
-        option(
-            "no-dev",
-            None,
-            "Do not list the development dependencies. (<warning>Deprecated</warning>)",
-        ),
         option("tree", "t", "List the dependencies as a tree."),
         option("latest", "l", "Show the latest version."),
         option(
@@ -81,7 +52,6 @@ lists all packages available."""
                 "To change that, add a <c1>python</c1> dependency to <c1>pyproject.toml</c1>")
             return 1
 
-        from cleo.io.null_io import NullIO
         from cleo.terminal import Terminal
 
         from poetry.puzzle.solver import Solver
@@ -98,49 +68,9 @@ lists all packages available."""
         if self.option("outdated"):
             self._io.input.set_option("latest", True)
 
-        excluded_groups = []
-        included_groups = []
-        only_groups = []
-        if self.option("no-dev"):
-            self.line(
-                "<warning>The `<fg=yellow;options=bold>--no-dev</>` option is deprecated, "
-                "use the `<fg=yellow;options=bold>--without dev</>` notation instead.</warning>"
-            )
-            excluded_groups.append("dev")
-
-        excluded_groups.extend(
-            [
-                group.strip()
-                for groups in self.option("without")
-                for group in groups.split(",")
-            ]
-        )
-        included_groups.extend(
-            [
-                group.strip()
-                for groups in self.option("with")
-                for group in groups.split(",")
-            ]
-        )
-        only_groups.extend(
-            [
-                group.strip()
-                for groups in self.option("only")
-                for group in groups.split(",")
-            ]
-        )
-
-        if self.option("default"):
-            only_groups.append("default")
-
         locked_repo = self.poetry.locker.locked_repository(True)
 
-        if only_groups:
-            root = self.poetry.package.with_dependency_groups(only_groups, only=True)
-        else:
-            root = self.poetry.package.with_dependency_groups(
-                included_groups
-            ).without_dependency_groups(excluded_groups)
+        root = self.poetry.package.clone()
 
         # Show tree view if requested
         if self.option("tree") and not package:
