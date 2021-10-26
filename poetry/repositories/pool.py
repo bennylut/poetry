@@ -146,7 +146,7 @@ class Pool(BaseRepository):
             except PackageNotFound:
                 pass
         else:
-            for idx, repo in enumerate(self._repositories):
+            for repo in self._repositories:
                 try:
                     package = repo.package(name, version, project, extras=extras)
                 except PackageNotFound:
