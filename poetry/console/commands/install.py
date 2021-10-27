@@ -44,7 +44,7 @@ class InstallCommand(Command):
 
         for subp in project.projects_graph():
             if subp.env:
-                subp.install_dependencies(
+                subp.install(
                     self.argument("packages"),
                     synchronize=self.option("sync"),
                     dry_run=self.option("dry-run"),

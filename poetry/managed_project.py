@@ -3,6 +3,7 @@ from typing import List, Union, MutableMapping
 from typing import TYPE_CHECKING, Iterator, Optional
 
 from cleo.io.outputs.output import Verbosity
+from poetry.core.masonry.utils.module import ModuleOrPackageNotFound
 from poetry.core.packages.dependency import Dependency
 from poetry.core.poetry import Poetry as BasePoetry
 from poetry.core.pyproject.profiles import ProfilesActivationRequest
@@ -16,6 +17,7 @@ from poetry.config.source import Source
 from .console import console
 from .installation import Installer
 from .installation.operations import Uninstall
+from .masonry.builders import EditableBuilder
 from .utils.authenticator import Authenticator
 
 if TYPE_CHECKING:
@@ -191,7 +193,7 @@ class ManagedProject(BasePoetry):
         # drop installed repository so that it will get reloaded if anyone needs it
         self._installed_repository = None
 
-    def install_dependencies(
+    def install(
             self, dependencies: List[str], *, synchronize: bool = False, lock_only: bool = False, update: bool = False,
             dry_run: bool = False, allow_prereleases: bool = False, source: Optional[str] = None,
             optional: bool = False, extras_strings: Optional[List[str]] = None,
@@ -237,6 +239,20 @@ class ManagedProject(BasePoetry):
         repo = installer.run()
 
         if not dry_run:
+            try:
+                builder = EditableBuilder(self, self.env, console.io)
+                console.println(
+                    f"<b>Installing</> the current project: <c1>{self.package.pretty_name}</c1> "
+                    f"(<c2>{self.package.pretty_version}</c2>)"
+                )
+                builder.build()
+            except ModuleOrPackageNotFound:
+                # This is likely due to the fact that the project is an application
+                # not following the structure expected by Poetry
+                # If this is a true error it will be picked up later by build anyway.
+                pass
+
+
             with self.pyproject.edit() as data:
 
                 dependencies = nested_dict_get(data, DEPENDENCIES_TABLE)
@@ -253,7 +269,6 @@ class ManagedProject(BasePoetry):
                             parsed_dep.spec['version'] = required_version
 
                     dependencies[parsed_dep.dependency.name] = parsed_dep.spec
-
 
             # reload package to reflect changes
             from poetry.factory import Factory

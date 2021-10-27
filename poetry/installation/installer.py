@@ -269,32 +269,32 @@ class Installer:
 
         root = self._package.clone()
 
-        # console.println("\n<info>Finding the necessary packages for the current system</>", verbosity=Verbosity.VERBOSE)
-        #
-        # # We resolve again by only using the lock file
-        # pool = Pool(ignore_repository_names=True, parent=self._pool)
-        #
-        # # Making a new repo containing the packages
-        # # newly resolved and the ones from the current lock file
-        # repo = Repository()
-        # for package in local_repo.packages + locked_repository.packages:
-        #     if not repo.has_package(package):
-        #         repo.add_package(package)
-        #
-        # pool.add_repository(repo)
-        #
-        # solver = Solver(
-        #     self._project, self._installed_repository, locked_repository, package=root, printer=NullPrinter
-        # )
-        # # Everything is resolved at this point, so we no longer need
-        # # to load deferred dependencies (i.e. VCS, URL and path dependencies)
-        # solver.provider.load_deferred(False)
-        #
-        # with solver.use_environment(self._env):
-        #     ops = solver.solve(use_latest=self._whitelist).calculate_operations(
-        #         with_uninstalls=self._requires_synchronization,
-        #         synchronize=self._requires_synchronization,
-        #     )
+        console.println("\n<info>Finding the necessary packages for the current system</>", verbosity=Verbosity.VERBOSE)
+
+        # We resolve again by only using the lock file
+        pool = Pool(ignore_repository_names=True, parent=self._pool)
+
+        # Making a new repo containing the packages
+        # newly resolved and the ones from the current lock file
+        repo = Repository()
+        for package in local_repo.packages + locked_repository.packages:
+            if not repo.has_package(package):
+                repo.add_package(package)
+
+        pool.add_repository(repo)
+
+        solver = Solver(
+            self._project, self._installed_repository, locked_repository, package=root, printer=NullPrinter, pool=pool
+        )
+        # Everything is resolved at this point, so we no longer need
+        # to load deferred dependencies (i.e. VCS, URL and path dependencies)
+        solver.provider.load_deferred(False)
+
+        with solver.use_environment(self._env):
+            ops = solver.solve(use_latest=self._whitelist).calculate_operations(
+                with_uninstalls=self._requires_synchronization,
+                synchronize=self._requires_synchronization,
+            )
 
         # CHANGE: I think that the last update to _get_operations_from_lock should cover this case
         # When the user receives a lockfile by their cvs and it does not contains some of the dependencies
@@ -558,13 +558,6 @@ class Installer:
             return solver.solve(use_latest=requires_dependency_resolution).calculate_operations()
 
         return ops
-        # if not required:
-        # ops.append(Uninstall(locked))
-        # else:
-        # elif installed:
-        #     if locked.optional and locked.name not in extra_packages:
-        #         ops.append(Uninstall(locked))
-
         #     is_installed = False
         #     for installed_package in installed_repo.packages:
         #         if locked.name == installed_package.name:

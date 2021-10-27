@@ -14,7 +14,7 @@ from poetry.core.packages.package import Package
 from poetry.mixology import resolve_version
 from poetry.mixology.failure import SolveFailure
 from poetry.packages import DependencyPackage
-from poetry.repositories import Repository
+from poetry.repositories import Repository, Pool
 from poetry.utils.env import Env
 
 from .exceptions import OverrideNeeded
@@ -38,13 +38,14 @@ class Solver:
             self,
             project: "ManagedProject",
             installed: Repository,
-            locked: Repository,
+            locked: Repository, *,
             package: Optional[Package] = None,
             provider: Optional[Provider] = None,
-            printer: Optional[Printer] = None
+            printer: Optional[Printer] = None,
+            pool: Optional[Pool] = None,
     ):
         self._package = package or project.package
-        self._pool = project.pool
+        self._pool = pool or project.pool
         self._installed = installed
         self._locked = locked
         self._printer = printer or console
