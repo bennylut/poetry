@@ -27,7 +27,7 @@ class BuildCommand(EnvCommand):
         if self.option("format"):
             fmt = self.option("format")
 
-        for poetry in self.poetry.sub_projects():
+        for poetry in self.poetry.projects_graph():
             self._build(fmt, poetry)
 
     def _build(self, fmt: str, poetry: ManagedProject):

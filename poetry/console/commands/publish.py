@@ -47,7 +47,7 @@ the config command.
         from poetry.publishing.publisher import Publisher
 
         cred_completer = _CredentialCompleter().complete if self.poetry.pyproject.is_parent() else None
-        for poetry in self.poetry.sub_projects():
+        for poetry in self.poetry.projects_graph():
             if poetry.env is None:
                 continue
 

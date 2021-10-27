@@ -48,6 +48,12 @@ class ManagedProject(BasePoetry):
         self._env = env
         self._installed_repository = None
 
+    def __str__(self):
+        return f"ManagedProject(name={self.pyproject.name}, path={self.path})"
+
+    def __repr__(self):
+        return str(self)
+
     @property
     def path(self) -> Path:
         return self.pyproject.path.parent
@@ -126,10 +132,10 @@ class ManagedProject(BasePoetry):
         from poetry.factory import Factory
         return Factory().create_poetry_for_pyproject(pyprj)
 
-    def sub_projects(self) -> Iterator["ManagedProject"]:
+    def projects_graph(self) -> Iterator["ManagedProject"]:
         if self.pyproject.is_parent():
             for subproject in self.pyproject.sub_projects.values():
-                yield from self._load_related_project(subproject).sub_projects()
+                yield from self._load_related_project(subproject).projects_graph()
 
         yield self
 
@@ -180,7 +186,7 @@ class ManagedProject(BasePoetry):
                 dependencies = nested_dict_get(data, DEPENDENCIES_TABLE)
                 if isinstance(dependencies, MutableMapping):
                     for name in names:
-                        del dependencies[name]
+                        dependencies.pop(name, None)
 
         # drop installed repository so that it will get reloaded if anyone needs it
         self._installed_repository = None

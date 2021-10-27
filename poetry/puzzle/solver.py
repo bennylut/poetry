@@ -129,7 +129,12 @@ class Solver:
 
         locked = {}
         for package in self._locked.packages:
-            locked[package.name] = DependencyPackage(package.to_dependency(), package)
+            try:
+                locked[package.name] = DependencyPackage(package.to_dependency(), package)
+            except FileNotFoundError:
+                # if in lock there is a dependency inside the filesystem that cannot be resolved,
+                # it just means that we need to re-resolve its version
+                pass
 
         try:
             result = resolve_version(

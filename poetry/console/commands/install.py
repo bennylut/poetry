@@ -41,25 +41,26 @@ class InstallCommand(Command):
         from poetry.app.relaxed_poetry import rp
 
         project = rp.active_project
-        if not project.env:
-            console.println(
-                "<error>This project does not requires python interpreter and therefore cannot have dependencies.</>\n"
-                "To change that, add a python dependency to <c1>pyproject.toml</c1>")
-            return 1
 
-        project.install_dependencies(
-            self.argument("packages"),
-            synchronize=self.option("sync"),
-            dry_run=self.option("dry-run"),
-            extras_strings=self.option("extras"),
-            update=self.option("update"),
-            lock_only=self.option("lock-only"),
-            editable=self.option("editable"),
-            optional=self.option("optional"),
-            python=self.option("python"),
-            platform=self.option("platform"),
-            source=self.option("source"),
-            allow_prereleases=self.option("allow-prereleases")
-        )
+        for subp in project.projects_graph():
+            if subp.env:
+                subp.install_dependencies(
+                    self.argument("packages"),
+                    synchronize=self.option("sync"),
+                    dry_run=self.option("dry-run"),
+                    extras_strings=self.option("extras"),
+                    update=self.option("update"),
+                    lock_only=self.option("lock-only"),
+                    editable=self.option("editable"),
+                    optional=self.option("optional"),
+                    python=self.option("python"),
+                    platform=self.option("platform"),
+                    source=self.option("source"),
+                    allow_prereleases=self.option("allow-prereleases")
+                )
+            else:
+                console.println(
+                    f"<info>Skipping {subp.pyproject.name}, it does not requires python interpreter and therefore cannot have dependencies.</>\n"
+                    "To change that, add a python dependency to <c1>pyproject.toml</c1>")
 
         return 0

@@ -59,7 +59,7 @@ class RelaxedPoetry:
                 self._plugin_manager.activate(self._active_project)
 
         except RuntimeError as err:
-            if command != "new":
+            if command not in ("new", "init"):
                 raise FileNotFoundError("could not find project to activate") from err
 
     def has_active_project(self) -> bool:

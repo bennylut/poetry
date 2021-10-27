@@ -122,14 +122,14 @@ class Layout:
         if self._license:
             poetry_content["license"] = self._license
         else:
-            poetry_content.remove("license")
+            del poetry_content["license"]
 
         poetry_content["readme"] = "README.{}".format(self._readme_format)
         packages = self.get_package_include()
         if packages:
             poetry_content["packages"].append(packages)
         else:
-            poetry_content.remove("packages")
+            del poetry_content["packages"]
 
         poetry_content["dependencies"]["python"] = self._python
 

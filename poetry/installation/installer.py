@@ -5,6 +5,7 @@ from typing import Optional
 from typing import Union
 
 from cleo.io.outputs.output import Verbosity
+from poetry.core.packages.dependency import Dependency
 from poetry.core.packages.package import Package
 
 from poetry.core.packages.project_package import ProjectPackage
@@ -250,16 +251,6 @@ class Installer:
 
             locked_repository = self._locker.locked_repository(True)
 
-            # if not self._locker.is_fresh():
-            #     console.println(
-            #         "<warning>"
-            #         "Warning: The lock file is not up to date with "
-            #         "the latest changes in pyproject.toml. "
-            #         "You may be getting outdated dependencies. "
-            #         "Run update to update them."
-            #         "</warning>"
-            #     )
-
             for extra in self._extras:
                 if extra not in self._locker.lock_data.get("extras", {}):
                     raise ValueError(f"Extra [{extra}] is not specified.")
@@ -276,57 +267,45 @@ class Installer:
             self._write_lock_file(local_repo.packages)
             return 0
 
-        # if self._without_groups or self._with_groups or self._only_groups:
-        #     if self._with_groups:
-        #         # Default dependencies and opted-in optional dependencies
-        #         root = self._package.with_dependency_groups(self._with_groups)
-        #     elif self._without_groups:
-        #         # Default dependencies without selected groups
-        #         root = self._package.without_dependency_groups(self._without_groups)
-        #     else:
-        #         # Only selected groups
-        #         root = self._package.with_dependency_groups(
-        #             self._only_groups, only=True
-        #         )
-        # else:
         root = self._package.clone()
 
-        console.println("\n<info>Finding the necessary packages for the current system</>", verbosity=Verbosity.VERBOSE)
+        # console.println("\n<info>Finding the necessary packages for the current system</>", verbosity=Verbosity.VERBOSE)
+        #
+        # # We resolve again by only using the lock file
+        # pool = Pool(ignore_repository_names=True, parent=self._pool)
+        #
+        # # Making a new repo containing the packages
+        # # newly resolved and the ones from the current lock file
+        # repo = Repository()
+        # for package in local_repo.packages + locked_repository.packages:
+        #     if not repo.has_package(package):
+        #         repo.add_package(package)
+        #
+        # pool.add_repository(repo)
+        #
+        # solver = Solver(
+        #     self._project, self._installed_repository, locked_repository, package=root, printer=NullPrinter
+        # )
+        # # Everything is resolved at this point, so we no longer need
+        # # to load deferred dependencies (i.e. VCS, URL and path dependencies)
+        # solver.provider.load_deferred(False)
+        #
+        # with solver.use_environment(self._env):
+        #     ops = solver.solve(use_latest=self._whitelist).calculate_operations(
+        #         with_uninstalls=self._requires_synchronization,
+        #         synchronize=self._requires_synchronization,
+        #     )
 
-        # We resolve again by only using the lock file
-        pool = Pool(ignore_repository_names=True, parent=self._pool)
-
-        # Making a new repo containing the packages
-        # newly resolved and the ones from the current lock file
-        repo = Repository()
-        for package in local_repo.packages + locked_repository.packages:
-            if not repo.has_package(package):
-                repo.add_package(package)
-
-        pool.add_repository(repo)
-
-        solver = Solver(
-            self._project, self._installed_repository, locked_repository, package=root, printer=NullPrinter
-        )
-        # Everything is resolved at this point, so we no longer need
-        # to load deferred dependencies (i.e. VCS, URL and path dependencies)
-        solver.provider.load_deferred(False)
-
-        with solver.use_environment(self._env):
-            ops = solver.solve(use_latest=self._whitelist).calculate_operations(
-                with_uninstalls=self._requires_synchronization,
-                synchronize=self._requires_synchronization,
-            )
-
+        # CHANGE: I think that the last update to _get_operations_from_lock should cover this case
         # When the user receives a lockfile by their cvs and it does not contains some of the dependencies
         # that was recently added, the lockfile dont have the information about those dependencies
         # and therefore it should be updated
-        out_of_lock_file_ops = [
-            op for op in ops
-            if isinstance(op, Install) and not locked_repository.has_package(op.package)]
-
-        if len(out_of_lock_file_ops) > 0:
-            self._populate_local_repo(local_repo, out_of_lock_file_ops)
+        # out_of_lock_file_ops = [
+        #     op for op in ops
+        #     if isinstance(op, Install) and not locked_repository.has_package(op.package)]
+        #
+        # if len(out_of_lock_file_ops) > 0:
+        #     self._populate_local_repo(local_repo, out_of_lock_file_ops)
 
         if not self._requires_synchronization:
             # If no packages synchronisation has been requested we need
@@ -349,6 +328,8 @@ class Installer:
         # We need to filter operations so that packages
         # not compatible with the current system,
         # or optional and not requested, are dropped
+        # TODO: there are filtering of operations every step of the way - need to move it into a central location
+        #       and reduce the complexity
         self._filter_operations(ops, local_repo)
 
         # update the lock if there was a version changes in the local repository
@@ -527,32 +508,86 @@ class Installer:
     ) -> List[Operation]:
         installed_repo = self._installed_repository
         ops = []
+        requirements = {it.name: it for it in self._package.all_requires}
+        installations = {it.name: it for it in installed_repo.packages}
+        lockes = {it.name: it for it in locked_repository.packages}
 
+        # Filter the operations by comparing it with what is
+        # currently installed and what is required to be installed
         extra_packages = self._get_extra_packages(locked_repository)
+        requires_dependency_resolution: List[str] = []
         for locked in locked_repository.packages:
-            is_installed = False
-            for installed in installed_repo.packages:
-                if locked.name == installed.name:
-                    is_installed = True
-                    if locked.optional and locked.name not in extra_packages:
-                        # Installed but optional and not requested in extras
-                        ops.append(Uninstall(locked))
-                    elif locked.version != installed.version:
-                        ops.append(Update(installed, locked))
-                    break
+            installed = installations.get(locked.name)
+            required: Dependency = requirements.get(locked.name)
 
-            # If it's optional and not in required extras
-            # we do not install
-            if locked.optional and locked.name not in extra_packages:
-                continue
+            if installed:
+                if locked.optional and locked.name not in extra_packages:
+                    ops.append(Uninstall(locked))
+                elif required and not required.accepts(locked):
+                    requires_dependency_resolution.append(locked.name)
+                elif locked.version != installed.version:
+                    ops.append(Update(installed, locked))
+                else:
+                    op = Install(locked)
+                    op.skip("Already installed")
+                    ops.append(op)
+            elif required:
+                if required.accepts(locked) and required.source_type == locked.source_type:
+                    ops.append(Install(locked))
+                else:
+                    requires_dependency_resolution.append(locked.name)
 
-            op = Install(locked)
-            if is_installed:
-                op.skip("Already installed")
+        # check if there were added packages that the lock does not know about
+        for requirement in self._package.all_requires:
+            if requirement.name not in lockes:
+                requires_dependency_resolution.append(requirement.name)
 
-            ops.append(op)
+        # if we requires dependency resolution it means that we deffer for the solver to find the required ops
+        if requires_dependency_resolution:
+            self._whitelist.extend(requires_dependency_resolution)
+            from poetry.puzzle import Solver
+
+            solver = Solver(
+                self._project,
+                self._installed_repository,
+                locked_repository,
+                printer=console,
+                package=self._package,
+            )
+
+            return solver.solve(use_latest=requires_dependency_resolution).calculate_operations()
 
         return ops
+        # if not required:
+        # ops.append(Uninstall(locked))
+        # else:
+        # elif installed:
+        #     if locked.optional and locked.name not in extra_packages:
+        #         ops.append(Uninstall(locked))
+
+        #     is_installed = False
+        #     for installed_package in installed_repo.packages:
+        #         if locked.name == installed_package.name:
+        #             is_installed = True
+        #             if locked.optional and locked.name not in extra_packages:
+        #                 # Installed but optional and not requested in extras
+        #                 ops.append(Uninstall(locked))
+        #             elif locked.version != installed_package.version:
+        #                 ops.append(Update(installed_package, locked))
+        #             break
+        #
+        #     # If it's optional and not in required extras
+        #     # we do not install
+        #     if locked.optional and locked.name not in extra_packages:
+        #         continue
+        #
+        #     op = Install(locked)
+        #     if is_installed:
+        #         op.skip("Already installed")
+        #
+        #     ops.append(op)
+        #
+        # return ops
 
     def _filter_operations(self, ops: List[Operation], repo: Repository) -> None:
         extra_packages = self._get_extra_packages(repo)
