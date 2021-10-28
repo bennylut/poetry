@@ -923,7 +923,7 @@ class EnvManager:
                 self.remove_venv(venv)
                 create_venv = True
             else:
-                console.println(f"Virtualenv <c1>{name}</> already exists.", "very_verbose")
+                console.println(f"Virtualenv <c1>{name}</> already exists.", Verbosity.VERY_VERBOSE)
 
         if create_venv:
             self.build_venv(
