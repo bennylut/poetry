@@ -18,6 +18,7 @@ from subprocess import CalledProcessError
 
 from typing import TYPE_CHECKING, Set
 
+from cleo.io.outputs.output import Verbosity
 from poetry.core.utils import toml
 from poetry.core.utils.props_ext import cached_property
 
@@ -853,7 +854,7 @@ class EnvManager:
 
                 python = "python" + python_to_try
 
-                console.println(f"<debug>Trying {python}</debug>", mode="debug")
+                console.println(f"<debug>Trying {python}</debug>", verbosity=Verbosity.DEBUG)
 
                 try:
                     python_patch = decode(
